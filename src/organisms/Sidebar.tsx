@@ -61,7 +61,7 @@ export const Sidebar: React.FC = () => {
       path: '/operations',
       label: 'Operaciones',
       icon: Activity,
-      roles: ['admin', 'user'], // Operadores y admins
+      roles: ['admin', 'user', 'guest'], // Admins, operadores e invitados
     },
     {
       path: '/checklist',
@@ -103,8 +103,8 @@ export const Sidebar: React.FC = () => {
                     flex items-center px-4 py-3 rounded-lg transition-colors duration-200
                     ${
                       isActive
-                        ? 'bg-blue-50 text-blue-600 font-medium'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-primary-50 text-primary font-medium'
+                        : 'text-secondary-700 hover:bg-secondary-100'
                     }
                   `}
                 >
@@ -121,24 +121,24 @@ export const Sidebar: React.FC = () => {
       <div className="border-t border-gray-200 p-4 space-y-3">
         {/* Selected Equipment */}
         {selectedEquipment && (
-          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+          <div className="bg-primary-50 rounded-lg p-3 border border-primary-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">
-                <Truck className="h-4 w-4 text-blue-600 mr-2" />
-                <span className="text-xs font-medium text-blue-900">Equipo Actual</span>
+                <Truck className="h-4 w-4 text-primary mr-2" />
+                <span className="text-xs font-medium text-primary-900">Equipo Actual</span>
               </div>
               <button
                 onClick={handleChangeEquipment}
-                className="text-blue-600 hover:text-blue-700 p-1"
+                className="text-primary hover:text-primary-700 p-1"
                 title="Cambiar equipo"
               >
                 <RefreshCw className="h-3 w-3" />
               </button>
             </div>
-            <p className="text-sm font-bold text-blue-900">
+            <p className="text-sm font-bold text-primary-900">
               {selectedEquipment.license_plate}
             </p>
-            <p className="text-xs text-blue-700">
+            <p className="text-xs text-primary-700">
               {selectedEquipment.brand} - {selectedEquipment.vehicle_type === 'tractor' ? 'Tractor' : 'Trailer'}
             </p>
           </div>

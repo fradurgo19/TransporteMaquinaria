@@ -32,8 +32,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
 
-  // Admins NO necesitan seleccionar equipo
-  if (user?.role !== 'admin' && !isEquipmentSelected) {
+  // Admins e invitados NO necesitan seleccionar equipo
+  if (user?.role !== 'admin' && user?.role !== 'guest' && !isEquipmentSelected) {
     return <Navigate to="/equipment-selection" replace />;
   }
 
@@ -61,6 +61,11 @@ const DashboardRedirect: React.FC = () => {
   // Admins van al dashboard
   if (user?.role === 'admin') {
     return <Navigate to="/dashboard" replace />;
+  }
+  
+  // Invitados van directo a operaciones (solo lectura)
+  if (user?.role === 'guest') {
+    return <Navigate to="/operations" replace />;
   }
   
   // Usuarios normales necesitan seleccionar equipo primero

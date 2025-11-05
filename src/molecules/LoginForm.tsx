@@ -64,7 +64,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, onSwitchToRegist
           <button
             type="button"
             onClick={onSwitchToRegister}
-            className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+            className="text-sm text-primary hover:text-primary-700 transition-colors"
           >
             Don't have an account? Register
           </button>

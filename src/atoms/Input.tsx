@@ -27,7 +27,7 @@ export const Input = React.memo<InputProps>(
               block w-full rounded-lg border ${error ? 'border-red-500' : 'border-gray-300'}
               ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2
               text-gray-900 placeholder-gray-400
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+              focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
               disabled:bg-gray-100 disabled:cursor-not-allowed
               transition-colors duration-200
               ${className}

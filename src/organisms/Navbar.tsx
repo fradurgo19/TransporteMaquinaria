@@ -31,8 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
               </button>
             )}
             <Link to="/" className="flex items-center space-x-2">
-              <Truck className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">
+              <Truck className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold text-secondary-900">
                 Transport Manager
               </span>
             </Link>

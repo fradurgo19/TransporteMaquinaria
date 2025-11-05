@@ -14,7 +14,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { format } from 'date-fns';
 
 export const OperationsPage: React.FC = () => {
-  useProtectedRoute(['admin', 'user']);
+  useProtectedRoute(['admin', 'user', 'guest']);
   const { user } = useAuth();
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude, error: geoError, isLoading: geoLoading, refresh: refreshLocation } = useGeolocation();

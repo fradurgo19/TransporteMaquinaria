@@ -108,7 +108,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSubmit, onSwitchTo
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+            className="text-sm text-primary hover:text-primary-700 transition-colors"
           >
             Already have an account? Sign In
           </button>

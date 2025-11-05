@@ -78,9 +78,9 @@ export const EquipmentSelectionPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <Loader className="h-12 w-12 text-primary animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Cargando equipos...</p>
         </div>
       </div>
@@ -89,7 +89,7 @@ export const EquipmentSelectionPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-6 text-center">
           <h2 className="text-xl font-bold text-red-600 mb-2">Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
@@ -102,10 +102,10 @@ export const EquipmentSelectionPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
             <Truck className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -134,7 +134,7 @@ export const EquipmentSelectionPage: React.FC = () => {
                   key={equip.id}
                   className={`p-4 cursor-pointer transition-all hover:shadow-lg ${
                     selectedId === equip.id
-                      ? 'ring-2 ring-blue-600 bg-blue-50'
+                      ? 'ring-2 ring-primary bg-primary-50'
                       : 'hover:bg-gray-50'
                   }`}
                   onClick={() => handleSelect(equip)}
@@ -146,7 +146,7 @@ export const EquipmentSelectionPage: React.FC = () => {
                       </Badge>
                     </div>
                     {selectedId === equip.id && (
-                      <CheckCircle className="h-6 w-6 text-blue-600" />
+                      <CheckCircle className="h-6 w-6 text-primary" />
                     )}
                   </div>
                   
