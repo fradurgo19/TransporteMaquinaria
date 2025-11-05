@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronograma de Implementación - Sistema de Gestión de Transporte</title>
+    <style>
+        @media print {
+            .page-break {
+                page-break-after: always;
+            }
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 4px solid #2563eb;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #1e40af;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .header .subtitle {
+            color: #64748b;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        .header .date {
+            color: #475569;
+            font-size: 14px;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        
+        .section {
+            margin-bottom: 35px;
+        }
+        
+        .section-title {
+            color: #1e40af;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .executive-summary {
+            background: #eff6ff;
+            padding: 25px;
+            border-left: 5px solid #2563eb;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        
+        .executive-summary p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+        
+        .objectives {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .objective-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .objective-card h3 {
+            color: #1e40af;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .objective-card ul {
+            margin-left: 20px;
+        }
+        
+        .objective-card li {
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        .timeline-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .timeline-table th {
+            background: #1e40af;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .timeline-table td {
+            padding: 10px 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .timeline-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .phase-header {
+            background: #dbeafe !important;
+            font-weight: 700;
+            color: #1e40af;
+        }
+        
+        .gantt-chart {
+            overflow-x: auto;
+            margin: 25px 0;
+        }
+        
+        .gantt-container {
+            min-width: 800px;
+        }
+        
+        .gantt-header {
+            display: grid;
+            grid-template-columns: 250px repeat(13, 1fr);
+            background: #1e40af;
+            color: white;
+            font-weight: 600;
+            padding: 12px 0;
+            text-align: center;
+            font-size: 11px;
+        }
+        
+        .gantt-row {
+            display: grid;
+            grid-template-columns: 250px repeat(13, 1fr);
+            border-bottom: 1px solid #e2e8f0;
+            min-height: 45px;
+            align-items: center;
+        }
+        
+        .gantt-task {
+            padding: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .gantt-cell {
+            position: relative;
+            border-right: 1px solid #e2e8f0;
+            min-height: 45px;
+        }
+        
+        .gantt-bar {
+            position: absolute;
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .phase-planning { background: #3b82f6; }
+        .phase-dev { background: #8b5cf6; }
+        .phase-testing { background: #ec4899; }
+        .phase-deploy { background: #10b981; }
+        .phase-training { background: #f59e0b; }
+        .phase-monitoring { background: #06b6d4; }
+        
+        .risk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+        
+        .risk-table th {
+            background: #dc2626;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .risk-table td {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .risk-high { color: #dc2626; font-weight: 700; }
+        .risk-medium { color: #f59e0b; font-weight: 700; }
+        .risk-low { color: #10b981; font-weight: 700; }
+        
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .resource-card {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .resource-card h4 {
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .resource-card ul {
+            margin-left: 20px;
+            font-size: 13px;
+        }
+        
+        .deliverables {
+            background: #f0fdf4;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #bbf7d0;
+            margin: 20px 0;
+        }
+        
+        .deliverables h4 {
+            color: #166534;
+            margin-bottom: 12px;
+        }
+        
+        .deliverables ul {
+            margin-left: 25px;
+        }
+        
+        .deliverables li {
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        .approval-section {
+            margin-top: 50px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+        }
+        
+        .approval-box {
+            border: 1px solid #cbd5e1;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .approval-box h4 {
+            color: #1e40af;
+            margin-bottom: 15px;
+        }
+        
+        .approval-line {
+            margin-top: 40px;
+            border-top: 1px solid #334155;
+            padding-top: 8px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+        }
+        
+        .budget-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .budget-table th {
+            background: #059669;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .budget-table td {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .budget-total {
+            background: #d1fae5 !important;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .tech-stack {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin: 20px 0;
+        }
+        
+        .tech-stack h4 {
+            color: #92400e;
+            margin-bottom: 12px;
+        }
+        
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .tech-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .tech-item strong {
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- PÁGINA 1: PORTADA Y RESUMEN EJECUTIVO -->
+        <div class="header">
+            <h1>Cronograma de Implementación</h1>
+            <div class="subtitle">Sistema de Gestión de Transporte de Maquinaria</div>
+            <div class="subtitle">Partequipos S.A.S</div>
+            <div class="date">Período: 21 de Octubre 2025 - 21 de Enero 2026 (3 Meses)</div>
+        </div>
+
+        <div class="executive-summary">
+            <h3 style="color: #1e40af; margin-bottom: 15px;">📋 RESUMEN EJECUTIVO</h3>
+            <p>
+                <strong>Proyecto:</strong> Desarrollo e implementación completa del Sistema de Gestión de Transporte de Maquinaria, 
+                una plataforma web integral diseñada para optimizar y digitalizar todos los procesos operativos de la flota vehicular 
+                de Partequipos S.A.S.
+            </p>
+            <p>
+                <strong>Objetivo Principal:</strong> Implementar una solución tecnológica robusta y escalable que permita el control 
+                en tiempo real de vehículos, operaciones, combustible, horas laborales y documentación, mejorando la eficiencia 
+                operativa en un 40% y reduciendo los costos administrativos en un 30%.
+            </p>
+            <p>
+                <strong>Alcance:</strong> El proyecto comprende el desarrollo completo del sistema desde cero, incluyendo módulos de 
+                autenticación con 3 roles de usuario (Admin, Usuario, Comercial), dashboard con métricas en tiempo real, gestión de 
+                equipos, tracking de GPS, control de combustible, registro de horas de operación con cálculo automático de horas extras, 
+                gestión de operaciones logísticas, checklists pre-operacionales y módulo de solicitudes de transporte.
+            </p>
+            <p>
+                <strong>Duración Total:</strong> 90 días calendario (3 meses) divididos en 6 fases principales: Planificación y Diseño, 
+                Desarrollo Backend, Desarrollo Frontend, Testing y QA, Despliegue en Producción, y Capacitación y Monitoreo.
+            </p>
+            <p>
+                <strong>Metodología:</strong> Desarrollo ágil con entregas incrementales, sprints de 2 semanas, revisiones continuas 
+                con stakeholders, y despliegue automatizado en Vercel con integración continua.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">🎯 OBJETIVOS DEL PROYECTO</h2>
+            <div class="objectives">
+                <div class="objective-card">
+                    <h3>Objetivos Técnicos</h3>
+                    <ul>
+                        <li>Desarrollar arquitectura escalable y mantenible</li>
+                        <li>Implementar autenticación segura con Supabase</li>
+                        <li>Integrar tracking GPS en tiempo real</li>
+                        <li>Automatizar cálculos de horas extras y nómina</li>
+                        <li>Garantizar rendimiento óptimo (< 2s carga inicial)</li>
+                        <li>Responsive design para móviles y tablets</li>
+                    </ul>
+                </div>
+                <div class="objective-card">
+                    <h3>Objetivos de Negocio</h3>
+                    <ul>
+                        <li>Reducir tiempos de registro en 60%</li>
+                        <li>Eliminar errores manuales en cálculo de horas</li>
+                        <li>Centralizar información operativa</li>
+                        <li>Generar reportes automáticos para gerencia</li>
+                        <li>Mejorar control de vencimientos documentales</li>
+                        <li>Aumentar productividad del equipo comercial</li>
+                    </ul>
+                </div>
+                <div class="objective-card">
+                    <h3>Objetivos Operativos</h3>
+                    <ul>
+                        <li>Capacitar al 100% del personal en 2 semanas</li>
+                        <li>Migrar datos históricos sin pérdida de información</li>
+                        <li>Establecer respaldos automáticos diarios</li>
+                        <li>Soporte técnico 24/7 durante primer mes</li>
+                        <li>Documentación completa de procesos</li>
+                        <li>Plan de contingencia ante fallos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="tech-stack">
+            <h4>🔧 STACK TECNOLÓGICO</h4>
+            <div class="tech-grid">
+                <div class="tech-item"><strong>Frontend:</strong> React 18, TypeScript, Vite, TailwindCSS</div>
+                <div class="tech-item"><strong>Backend:</strong> Supabase (PostgreSQL, Auth, Storage)</div>
+                <div class="tech-item"><strong>State Management:</strong> TanStack Query, React Context</div>
+                <div class="tech-item"><strong>Routing:</strong> React Router v7</div>
+                <div class="tech-item"><strong>Iconografía:</strong> Lucide React</div>
+                <div class="tech-item"><strong>Utilidades:</strong> date-fns, Geolocation API</div>
+                <div class="tech-item"><strong>Deploy:</strong> Vercel (CI/CD automático)</div>
+                <div class="tech-item"><strong>Calidad:</strong> ESLint, TypeScript, Pruebas E2E</div>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- PÁGINA 2: CRONOGRAMA DETALLADO -->
+        <div class="section">
+            <h2 class="section-title">📅 CRONOGRAMA DETALLADO POR FASES</h2>
+            
+            <table class="timeline-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th style="width: 200px;">Fase / Actividad</th>
+                        <th style="width: 120px;">Inicio</th>
+                        <th style="width: 120px;">Fin</th>
+                        <th style="width: 80px;">Duración</th>
+                        <th>Responsable</th>
+                        <th>Entregables</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- FASE 1 -->
+                    <tr class="phase-header">
+                        <td colspan="7">FASE 1: PLANIFICACIÓN Y DISEÑO</td>
+                    </tr>
+                    <tr>
+                        <td>1.1</td>
+                        <td>Análisis de requisitos</td>
+                        <td>21/10/2025</td>
+                        <td>23/10/2025</td>
+                        <td>3 días</td>
+                        <td>Analista Senior</td>
+                        <td>Documento de requisitos funcionales y no funcionales</td>
+                    </tr>
+                    <tr>
+                        <td>1.2</td>
+                        <td>Diseño de arquitectura</td>
+                        <td>24/10/2025</td>
+                        <td>26/10/2025</td>
+                        <td>3 días</td>
+                        <td>Arquitecto de Software</td>
+                        <td>Diagrama de arquitectura, modelo de datos, APIs</td>
+                    </tr>
+                    <tr>
+                        <td>1.3</td>
+                        <td>Diseño UI/UX</td>
+                        <td>27/10/2025</td>
+                        <td>30/10/2025</td>
+                        <td>4 días</td>
+                        <td>Diseñador UX/UI</td>
+                        <td>Wireframes, mockups, sistema de diseño</td>
+                    </tr>
+                    <tr>
+                        <td>1.4</td>
+                        <td>Setup proyecto y repositorio</td>
+                        <td>31/10/2025</td>
+                        <td>01/11/2025</td>
+                        <td>2 días</td>
+                        <td>DevOps Engineer</td>
+                        <td>Repositorio configurado, CI/CD inicial, ambientes</td>
+                    </tr>
+                    
+                    <!-- FASE 2 -->
+                    <tr class="phase-header">
+                        <td colspan="7">FASE 2: DESARROLLO BACKEND E INFRAESTRUCTURA</td>
+                    </tr>
+                    <tr>
+                        <td>2.1</td>
+                        <td>Configuración Supabase</td>
+                        <td>02/11/2025</td>
+                        <td>04/11/2025</td>
+                        <td>3 días</td>
+                        <td>Backend Developer</td>
+                        <td>Base de datos configurada, tablas creadas</td>
+                    </tr>
+                    <tr>
+                        <td>2.2</td>
+                        <td>Sistema de autenticación</td>
+                        <td>05/11/2025</td>
+                        <td>07/11/2025</td>
+                        <td>3 días</td>
+                        <td>Backend Developer</td>
+                        <td>Auth funcional, roles implementados, RLS policies</td>
+                    </tr>
+                    <tr>
+                        <td>2.3</td>
+                        <td>APIs y servicios</td>
+                        <td>08/11/2025</td>
+                        <td>13/11/2025</td>
+                        <td>6 días</td>
+                        <td>Backend Developer</td>
+                        <td>Endpoints REST, funciones serverless, validaciones</td>
+                    </tr>
+                    <tr>
+                        <td>2.4</td>
+                        <td>Storage y uploads</td>
+                        <td>14/11/2025</td>
+                        <td>16/11/2025</td>
+                        <td>3 días</td>
+                        <td>Backend Developer</td>
+                        <td>Sistema de archivos, compresión de imágenes</td>
+                    </tr>
+                    
+                    <!-- FASE 3 -->
+                    <tr class="phase-header">
+                        <td colspan="7">FASE 3: DESARROLLO FRONTEND</td>
+                    </tr>
+                    <tr>
+                        <td>3.1</td>
+                        <td>Componentes base (Atoms)</td>
+                        <td>17/11/2025</td>
+                        <td>19/11/2025</td>
+                        <td>3 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Biblioteca de componentes reutilizables</td>
+                    </tr>
+                    <tr>
+                        <td>3.2</td>
+                        <td>Módulo de autenticación</td>
+                        <td>20/11/2025</td>
+                        <td>22/11/2025</td>
+                        <td>3 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Login, registro, recuperación de contraseña</td>
+                    </tr>
+                    <tr>
+                        <td>3.3</td>
+                        <td>Dashboard y métricas</td>
+                        <td>23/11/2025</td>
+                        <td>25/11/2025</td>
+                        <td>3 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Dashboard con KPIs y gráficos en tiempo real</td>
+                    </tr>
+                    <tr>
+                        <td>3.4</td>
+                        <td>Gestión de equipos</td>
+                        <td>26/11/2025</td>
+                        <td>28/11/2025</td>
+                        <td>3 días</td>
+                        <td>Frontend Developer</td>
+                        <td>CRUD completo de vehículos, GPS tracking</td>
+                    </tr>
+                    <tr>
+                        <td>3.5</td>
+                        <td>Módulo horas de operación</td>
+                        <td>29/11/2025</td>
+                        <td>01/12/2025</td>
+                        <td>3 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Check-in/out, cálculo automático horas extras</td>
+                    </tr>
+                    <tr>
+                        <td>3.6</td>
+                        <td>Módulo combustible</td>
+                        <td>02/12/2025</td>
+                        <td>03/12/2025</td>
+                        <td>2 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Registro consumo, upload recibos, reportes</td>
+                    </tr>
+                    <tr>
+                        <td>3.7</td>
+                        <td>Módulo operaciones</td>
+                        <td>04/12/2025</td>
+                        <td>05/12/2025</td>
+                        <td>2 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Tracking carga/ruta/entrega, documentación</td>
+                    </tr>
+                    <tr>
+                        <td>3.8</td>
+                        <td>Checklist y solicitudes</td>
+                        <td>06/12/2025</td>
+                        <td>07/12/2025</td>
+                        <td>2 días</td>
+                        <td>Frontend Developer</td>
+                        <td>Pre-operational checks, transport requests</td>
+                    </tr>
+                    
+                    <!-- FASE 4 -->
+                    <tr class="phase-header">
+                        <td colspan="7">FASE 4: TESTING Y ASEGURAMIENTO DE CALIDAD</td>
+                    </tr>
+                    <tr>
+                        <td>4.1</td>
+                        <td>Pruebas unitarias</td>
+                        <td>08/12/2025</td>
+                        <td>09/12/2025</td>
+                        <td>2 días</td>
+                        <td>QA Engineer</td>
+                        <td>Suite de pruebas unitarias (>80% cobertura)</td>
+                    </tr>
+                    <tr>
+                        <td>4.2</td>
+                        <td>Pruebas de integración</td>
+                        <td>10/12/2025</td>
+                        <td>11/12/2025</td>
+                        <td>2 días</td>
+                        <td>QA Engineer</td>
+                        <td>Validación flujos completos end-to-end</td>
+                    </tr>
+                    <tr>
+                        <td>4.3</td>
+                        <td>UAT (User Acceptance)</td>
+                        <td>12/12/2025</td>
+                        <td>13/12/2025</td>
+                        <td>2 días</td>
+                        <td>Product Owner</td>
+                        <td>Aprobación usuarios finales, correcciones</td>
+                    </tr>
+                    <tr>
+                        <td>4.4</td>
+                        <td>Testing rendimiento</td>
+                        <td>14/12/2025</td>
+                        <td>14/12/2025</td>
+                        <td>1 día</td>
+                        <td>QA Engineer</td>
+                        <td>Pruebas de carga, optimización performance</td>
+                    </tr>
+                    
+                    <!-- FASE 5 -->
+                    <tr class="phase-header">
+                        <td colspan="7">FASE 5: DESPLIEGUE EN PRODUCCIÓN</td>
+                    </tr>
+                    <tr>
+                        <td>5.1</td>
+                        <td>Migración de datos</td>
+                        <td>15/12/2025</td>
+                        <td>15/12/2025</td>
+                        <td>1 día</td>
+                        <td>DevOps Engineer</td>
+                        <td>Datos históricos migrados y validados</td>
+                    </tr>
+                    <tr>
+                        <td>5.2</td>
+                        <td>Deploy a producción</td>
+                        <td>16/12/2025</td>
+                        <td>16/12/2025</td>
+                        <td>1 día</td>
+                        <td>DevOps Engineer</td>
+                        <td>Aplicación live en Vercel, DNS configurado</td>
+                    </tr>
+                    <tr>
+                        <td>5.3</td>
+                        <td>Configuración monitoreo</td>
+                        <td>17/12/2025</td>
+                        <td>17/12/2025</td>
+                        <td>1 día</td>
+                        <td>DevOps Engineer</td>
+                        <td>Alertas, logs, métricas, backups automáticos</td>
+                    </tr>
+                    
+                    <!-- FASE 6 -->
+                    <tr class="phase-header">
+                        <td colspan="7">FASE 6: CAPACITACIÓN Y MONITOREO</td>
+                    </tr>
+                    <tr>
+                        <td>6.1</td>
+                        <td>Capacitación administradores</td>
+                        <td>18/12/2025</td>
+                        <td>18/12/2025</td>
+                        <td>1 día</td>
+                        <td>Tech Lead</td>
+                        <td>Admins capacitados, manuales entregados</td>
+                    </tr>
+                    <tr>
+                        <td>6.2</td>
+                        <td>Capacitación usuarios</td>
+                        <td>19/12/2025</td>
+                        <td>19/12/2025</td>
+                        <td>1 día</td>
+                        <td>Tech Lead</td>
+                        <td>Usuarios operativos capacitados</td>
+                    </tr>
+                    <tr>
+                        <td>6.3</td>
+                        <td>Documentación final</td>
+                        <td>20/12/2025</td>
+                        <td>05/01/2026</td>
+                        <td>10 días</td>
+                        <td>Tech Lead</td>
+                        <td>Manuales completos, guías técnicas, FAQs</td>
+                    </tr>
+                    <tr>
+                        <td>6.4</td>
+                        <td>Optimizaciones finales</td>
+                        <td>06/01/2026</td>
+                        <td>12/01/2026</td>
+                        <td>7 días</td>
+                        <td>Full Stack Team</td>
+                        <td>Performance tuning, UX improvements</td>
+                    </tr>
+                    <tr>
+                        <td>6.5</td>
+                        <td>Monitoreo y estabilización</td>
+                        <td>13/01/2026</td>
+                        <td>21/01/2026</td>
+                        <td>9 días</td>
+                        <td>Full Team</td>
+                        <td>Sistema estable, soporte activo 24/7, ajustes finales</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- PÁGINA 3: DIAGRAMA DE GANTT -->
+        <div class="section">
+            <h2 class="section-title">📊 DIAGRAMA DE GANTT</h2>
+            
+            <div class="gantt-chart">
+                <div class="gantt-container">
+                    <div class="gantt-header">
+                        <div>Actividad</div>
+                        <div>Sem 1<br>21-27 Oct</div>
+                        <div>Sem 2<br>28 Oct-3 Nov</div>
+                        <div>Sem 3<br>4-10 Nov</div>
+                        <div>Sem 4<br>11-17 Nov</div>
+                        <div>Sem 5<br>18-24 Nov</div>
+                        <div>Sem 6<br>25 Nov-1 Dic</div>
+                        <div>Sem 7<br>2-8 Dic</div>
+                        <div>Sem 8<br>9-15 Dic</div>
+                        <div>Sem 9<br>16-22 Dic</div>
+                        <div>Sem 10<br>23-29 Dic</div>
+                        <div>Sem 11<br>30 Dic-5 Ene</div>
+                        <div>Sem 12<br>6-12 Ene</div>
+                        <div>Sem 13<br>13-21 Ene</div>
+                    </div>
+                    
+                    <!-- Fase 1 -->
+                    <div class="gantt-row">
+                        <div class="gantt-task">Análisis requisitos</div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-planning" style="left: 0%; width: 30%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Diseño arquitectura</div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-planning" style="left: 40%; width: 40%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Diseño UI/UX</div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-planning" style="left: 85%; width: 15%;">1d</div>
+                        </div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-planning" style="left: 0%; width: 50%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Setup proyecto</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-planning" style="left: 60%; width: 40%;">2d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <!-- Fase 2 -->
+                    <div class="gantt-row">
+                        <div class="gantt-task">Config Supabase</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 15%; width: 40%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Sistema autenticación</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 65%; width: 35%;">2d</div>
+                        </div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 0%; width: 15%;">1d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">APIs y servicios</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 15%; width: 85%;">6d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Storage y uploads</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 0%; width: 40%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <!-- Fase 3 -->
+                    <div class="gantt-row">
+                        <div class="gantt-task">Componentes base</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 50%; width: 50%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Módulo autenticación</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 0%; width: 40%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Dashboard y métricas</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 50%; width: 50%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Gestión de equipos</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 0%; width: 40%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Horas de operación</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 50%; width: 50%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Módulo combustible</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 0%; width: 30%;">2d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Módulo operaciones</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 30%; width: 30%;">2d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Checklist y solicitudes</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-dev" style="left: 60%; width: 30%;">2d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <!-- Fase 4 -->
+                    <div class="gantt-row">
+                        <div class="gantt-task">Testing completo</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-testing" style="left: 90%; width: 10%;">1d</div>
+                        </div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-testing" style="left: 0%; width: 70%;">5d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <!-- Fase 5 -->
+                    <div class="gantt-row">
+                        <div class="gantt-task">Deploy producción</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-deploy" style="left: 0%; width: 40%;">3d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <!-- Fase 6 -->
+                    <div class="gantt-row">
+                        <div class="gantt-task">Capacitación</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-training" style="left: 0%; width: 50%;">4d</div>
+                        </div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-task">Monitoreo inicial</div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell"></div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-monitoring" style="left: 0%; width: 80%;">6d</div>
+                        </div>
+                        <div class="gantt-cell">
+                            <div class="gantt-bar phase-monitoring" style="left: 0%; width: 20%;">2d</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; font-size: 13px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #3b82f6; border-radius: 3px;"></div>
+                    <span>Planificación</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #8b5cf6; border-radius: 3px;"></div>
+                    <span>Desarrollo</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #ec4899; border-radius: 3px;"></div>
+                    <span>Testing</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #10b981; border-radius: 3px;"></div>
+                    <span>Deploy</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #f59e0b; border-radius: 3px;"></div>
+                    <span>Capacitación</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #06b6d4; border-radius: 3px;"></div>
+                    <span>Monitoreo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- PÁGINA 4: RECURSOS Y PRESUPUESTO -->
+        <div class="section">
+            <h2 class="section-title">👥 RECURSOS NECESARIOS</h2>
+            
+            <div class="resources-grid">
+                <div class="resource-card">
+                    <h4>Equipo Técnico</h4>
+                    <ul>
+                        <li>1 Arquitecto de Software Senior</li>
+                        <li>2 Full Stack Developers</li>
+                        <li>1 Frontend Specialist</li>
+                        <li>1 Backend/DB Specialist</li>
+                        <li>1 QA Engineer</li>
+                        <li>1 DevOps Engineer</li>
+                    </ul>
+                </div>
+                
+                <div class="resource-card">
+                    <h4>Equipo UX/Product</h4>
+                    <ul>
+                        <li>1 Diseñador UX/UI</li>
+                        <li>1 Product Owner</li>
+                        <li>1 Analista de Negocio</li>
+                    </ul>
+                </div>
+                
+                <div class="resource-card">
+                    <h4>Infraestructura Cloud</h4>
+                    <ul>
+                        <li>Supabase Pro (DB + Auth + Storage)</li>
+                        <li>Vercel Pro (Hosting + CDN)</li>
+                        <li>Dominio personalizado</li>
+                        <li>Certificado SSL</li>
+                        <li>Backup automático diario</li>
+                    </ul>
+                </div>
+                
+                <div class="resource-card">
+                    <h4>Herramientas</h4>
+                    <ul>
+                        <li>GitHub (repositorio privado)</li>
+                        <li>Figma (diseño colaborativo)</li>
+                        <li>Jira/Linear (gestión proyecto)</li>
+                        <li>Slack/Teams (comunicación)</li>
+                        <li>Sentry (monitoreo errores)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">💰 PRESUPUESTO ESTIMADO</h2>
+            
+            <table class="budget-table">
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        <th style="width: 100px;">Cantidad</th>
+                        <th style="width: 150px;">Costo Unitario</th>
+                        <th style="width: 150px;">Total</th>
+                        <th style="width: 120px;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Arquitecto de Software Senior (3 meses)</td>
+                        <td>3 meses</td>
+                        <td>$8,000,000 COP</td>
+                        <td>$24,000,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Full Stack Developers (2 x 3 meses)</td>
+                        <td>6 meses</td>
+                        <td>$6,000,000 COP</td>
+                        <td>$36,000,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Frontend/Backend Specialists (2 x 3 meses)</td>
+                        <td>6 meses</td>
+                        <td>$6,500,000 COP</td>
+                        <td>$39,000,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>QA Engineer (3 meses)</td>
+                        <td>3 meses</td>
+                        <td>$5,500,000 COP</td>
+                        <td>$16,500,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>DevOps Engineer (3 meses)</td>
+                        <td>3 meses</td>
+                        <td>$7,000,000 COP</td>
+                        <td>$21,000,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Diseñador UX/UI (1.5 meses)</td>
+                        <td>1.5 meses</td>
+                        <td>$5,000,000 COP</td>
+                        <td>$7,500,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Product Owner / Analista (3 meses)</td>
+                        <td>3 meses</td>
+                        <td>$5,500,000 COP</td>
+                        <td>$16,500,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Supabase Pro (3 meses)</td>
+                        <td>3 meses</td>
+                        <td>$100 USD</td>
+                        <td>$1,200,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Vercel Pro</td>
+                        <td>Mensual</td>
+                        <td>$20 USD/mes</td>
+                        <td>$80,000 COP/mes</td>
+                        <td><span style="color: #f59e0b; font-weight: 600;">⚠ Pago mensual</span></td>
+                    </tr>
+                    <tr>
+                        <td>Dominio y SSL</td>
+                        <td>1 año</td>
+                        <td>-</td>
+                        <td>$200,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Herramientas y licencias</td>
+                        <td>3 meses</td>
+                        <td>-</td>
+                        <td>$2,250,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Pagado</span></td>
+                    </tr>
+                    <tr>
+                        <td>Contingencia (10%)</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>$16,395,000 COP</td>
+                        <td><span style="color: #10b981; font-weight: 600;">✓ Reservado</span></td>
+                    </tr>
+                    <tr class="budget-total">
+                        <td colspan="4">TOTAL INVERSIÓN PROYECTO (Ya cubierto)</td>
+                        <td>$180,345,000 COP</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="background: #fef3c7; padding: 15px; border-radius: 6px; margin-top: 15px; font-size: 14px;">
+                <strong style="color: #92400e;">💡 Nota:</strong> Todos los recursos humanos y servicios han sido cubiertos. 
+                <strong>Único costo recurrente:</strong> Vercel Pro $20 USD mensuales ($80,000 COP/mes aprox.) para hosting y CI/CD.
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- PÁGINA 5: RIESGOS Y ENTREGABLES -->
+        <div class="section">
+            <h2 class="section-title">⚠️ ANÁLISIS DE RIESGOS</h2>
+            
+            <table class="risk-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;">#</th>
+                        <th>Riesgo Identificado</th>
+                        <th style="width: 100px;">Probabilidad</th>
+                        <th style="width: 100px;">Impacto</th>
+                        <th>Estrategia de Mitigación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Retrasos en definición de requisitos</td>
+                        <td class="risk-medium">Media</td>
+                        <td class="risk-high">Alto</td>
+                        <td>Sesiones de work intensivas primera semana con stakeholders clave. Documentación detallada aprobada antes de iniciar desarrollo.</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Problemas de integración con Supabase</td>
+                        <td class="risk-low">Baja</td>
+                        <td class="risk-medium">Medio</td>
+                        <td>Pruebas de concepto en fase inicial. Equipo con experiencia previa en Supabase. Documentación oficial actualizada.</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Resistencia al cambio de usuarios finales</td>
+                        <td class="risk-medium">Media</td>
+                        <td class="risk-high">Alto</td>
+                        <td>Involucramiento de usuarios desde diseño UX. Capacitaciones personalizadas. Soporte 24/7 primer mes. Documentación visual.</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Errores en migración de datos históricos</td>
+                        <td class="risk-medium">Media</td>
+                        <td class="risk-high">Alto</td>
+                        <td>Scripts de migración probados en ambiente de prueba. Validaciones exhaustivas. Backup completo antes de migración. Rollback plan.</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Problemas de rendimiento con datos masivos</td>
+                        <td class="risk-low">Baja</td>
+                        <td class="risk-medium">Medio</td>
+                        <td>Pruebas de carga desde semana 7. Optimización de queries. Indexación adecuada. Paginación y lazy loading implementados.</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Bugs críticos en producción</td>
+                        <td class="risk-medium">Media</td>
+                        <td class="risk-high">Alto</td>
+                        <td>Testing exhaustivo (unitario, integración, E2E). UAT completo. Monitoring con alertas en tiempo real. Hotfix deployment en <30min.</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Indisponibilidad de personal clave</td>
+                        <td class="risk-low">Baja</td>
+                        <td class="risk-high">Alto</td>
+                        <td>Documentación técnica continua. Pair programming. Conocimiento compartido en equipo. Respaldos identificados para roles críticos.</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Cambios de alcance durante desarrollo</td>
+                        <td class="risk-medium">Media</td>
+                        <td class="risk-high">Alto</td>
+                        <td>Proceso formal de change requests. Evaluación de impacto en tiempo/costo. Priorización con Product Owner. Scope freezing semana 5.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">📦 ENTREGABLES PRINCIPALES</h2>
+            
+            <div class="deliverables">
+                <h4>Documentación Técnica</h4>
+                <ul>
+                    <li><strong>Documento de Requisitos Funcionales:</strong> Especificación detallada de todas las funcionalidades del sistema</li>
+                    <li><strong>Arquitectura del Sistema:</strong> Diagramas de arquitectura, modelo de datos, flujos de información</li>
+                    <li><strong>Manual de Usuario:</strong> Guías paso a paso para cada módulo y rol de usuario</li>
+                    <li><strong>Manual de Administrador:</strong> Configuración, gestión de usuarios, respaldos, troubleshooting</li>
+                    <li><strong>Documentación de APIs:</strong> Endpoints, parámetros, respuestas, ejemplos de uso</li>
+                    <li><strong>Documentación de Código:</strong> Código comentado, convenciones, guías de contribución</li>
+                </ul>
+            </div>
+            
+            <div class="deliverables">
+                <h4>Software y Sistemas</h4>
+                <ul>
+                    <li><strong>Aplicación Web Completa:</strong> Sistema funcional desplegado en producción (Vercel)</li>
+                    <li><strong>Base de Datos:</strong> Supabase configurado con todas las tablas, relaciones y políticas de seguridad</li>
+                    <li><strong>Repositorio de Código:</strong> Código fuente versionado en GitHub con CI/CD configurado</li>
+                    <li><strong>Ambiente de Staging:</strong> Ambiente de pruebas para validaciones previas a producción</li>
+                    <li><strong>Sistema de Monitoreo:</strong> Dashboards de métricas, logs centralizados, alertas automáticas</li>
+                </ul>
+            </div>
+            
+            <div class="deliverables">
+                <h4>Capacitación y Soporte</h4>
+                <ul>
+                    <li><strong>Sesiones de Capacitación:</strong> 2 días completos para administradores y usuarios operativos</li>
+                    <li><strong>Material de Capacitación:</strong> Videos tutoriales, presentaciones, quick guides</li>
+                    <li><strong>Soporte Técnico:</strong> 30 días de soporte 24/7 post-lanzamiento</li>
+                    <li><strong>Plan de Mantenimiento:</strong> Procedimientos de actualización, backup, disaster recovery</li>
+                </ul>
+            </div>
+            
+            <div class="deliverables">
+                <h4>Reportes y Certificaciones</h4>
+                <ul>
+                    <li><strong>Reporte de Testing:</strong> Resultados de pruebas unitarias, integración, rendimiento y UAT</li>
+                    <li><strong>Certificado de Seguridad:</strong> SSL configurado, políticas de seguridad validadas</li>
+                    <li><strong>Reporte de Migración:</strong> Datos migrados, validaciones realizadas, inconsistencias detectadas</li>
+                    <li><strong>Acta de Entrega Final:</strong> Documento formal de cierre del proyecto con firmas de aprobación</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- PÁGINA 6: INDICADORES Y APROBACIÓN -->
+        <div class="section">
+            <h2 class="section-title">📈 INDICADORES CLAVE DE ÉXITO (KPIs)</h2>
+            
+            <table class="timeline-table">
+                <thead>
+                    <tr>
+                        <th>Indicador</th>
+                        <th style="width: 150px;">Meta</th>
+                        <th style="width: 120px;">Medición</th>
+                        <th>Responsable</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cumplimiento de cronograma</td>
+                        <td>100% entregas a tiempo</td>
+                        <td>Semanal</td>
+                        <td>Project Manager</td>
+                    </tr>
+                    <tr>
+                        <td>Cobertura de pruebas</td>
+                        <td>&gt; 80% código cubierto</td>
+                        <td>Continua</td>
+                        <td>QA Engineer</td>
+                    </tr>
+                    <tr>
+                        <td>Bugs críticos en producción</td>
+                        <td>0 bugs críticos</td>
+                        <td>Diaria</td>
+                        <td>Tech Lead</td>
+                    </tr>
+                    <tr>
+                        <td>Tiempo de carga inicial</td>
+                        <td>&lt; 2 segundos</td>
+                        <td>Pre-deploy</td>
+                        <td>Frontend Lead</td>
+                    </tr>
+                    <tr>
+                        <td>Disponibilidad del sistema</td>
+                        <td>99.9% uptime</td>
+                        <td>24/7</td>
+                        <td>DevOps Engineer</td>
+                    </tr>
+                    <tr>
+                        <td>Satisfacción de usuarios capacitados</td>
+                        <td>&gt; 85% satisfacción</td>
+                        <td>Post-training</td>
+                        <td>Product Owner</td>
+                    </tr>
+                    <tr>
+                        <td>Reducción tiempo de registro</td>
+                        <td>60% menos tiempo</td>
+                        <td>Mes 1 post-deploy</td>
+                        <td>Business Analyst</td>
+                    </tr>
+                    <tr>
+                        <td>Adopción del sistema</td>
+                        <td>&gt; 90% usuarios activos</td>
+                        <td>Semana 2 post-deploy</td>
+                        <td>Product Owner</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">🎯 CRITERIOS DE ACEPTACIÓN</h2>
+            
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981;">
+                <h4 style="color: #166534; margin-bottom: 15px;">El proyecto se considerará exitoso cuando:</h4>
+                <ol style="margin-left: 25px; line-height: 2;">
+                    <li>Todos los módulos funcionales estén operativos y aprobados por stakeholders</li>
+                    <li>Sistema desplegado en producción con SSL y dominio personalizado</li>
+                    <li>Todas las pruebas de QA hayan pasado exitosamente</li>
+                    <li>Datos históricos migrados y validados sin pérdidas</li>
+                    <li>Capacitación completada con &gt;85% satisfacción de usuarios</li>
+                    <li>Documentación técnica y de usuario entregada y aprobada</li>
+                    <li>Sistema de monitoreo y alertas funcionando correctamente</li>
+                    <li>Backups automáticos configurados y probados</li>
+                    <li>Soporte post-lanzamiento activo durante 30 días</li>
+                    <li>Acta de entrega firmada por Gerencia Comercial</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">📞 COMUNICACIÓN Y GOBERNANZA</h2>
+            
+            <table class="timeline-table">
+                <thead>
+                    <tr>
+                        <th>Tipo de Reunión</th>
+                        <th style="width: 120px;">Frecuencia</th>
+                        <th style="width: 100px;">Duración</th>
+                        <th>Participantes</th>
+                        <th>Objetivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Daily Standup</td>
+                        <td>Diaria</td>
+                        <td>15 min</td>
+                        <td>Equipo técnico</td>
+                        <td>Sincronización diaria, bloqueadores, progreso</td>
+                    </tr>
+                    <tr>
+                        <td>Sprint Planning</td>
+                        <td>Quincenal</td>
+                        <td>2 horas</td>
+                        <td>Todo el equipo</td>
+                        <td>Planificación de tareas para próximos 2 semanas</td>
+                    </tr>
+                    <tr>
+                        <td>Sprint Review</td>
+                        <td>Quincenal</td>
+                        <td>1 hora</td>
+                        <td>Equipo + Stakeholders</td>
+                        <td>Demostración de avances, feedback</td>
+                    </tr>
+                    <tr>
+                        <td>Steering Committee</td>
+                        <td>Semanal</td>
+                        <td>30 min</td>
+                        <td>Tech Lead + Gerencia</td>
+                        <td>Reporte ejecutivo, decisiones estratégicas</td>
+                    </tr>
+                    <tr>
+                        <td>Retrospectiva</td>
+                        <td>Quincenal</td>
+                        <td>1 hora</td>
+                        <td>Todo el equipo</td>
+                        <td>Mejora continua, lecciones aprendidas</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="approval-section">
+            <div class="approval-box">
+                <h4>Elaborado por:</h4>
+                <p style="margin: 15px 0;"><strong>Frank Anderson Duran Gonzalez</strong></p>
+                <p style="font-size: 13px; color: #64748b;">Ingeniero de Digitalización y Automatización</p>
+                <div class="approval-line">Firma y Fecha</div>
+            </div>
+            
+            <div class="approval-box">
+                <h4>Revisado por:</h4>
+                <p style="margin: 15px 0;"><strong>Gerencia de Tecnología</strong></p>
+                <p style="font-size: 13px; color: #64748b;">CTO / Director de IT</p>
+                <div class="approval-line">Firma y Fecha</div>
+            </div>
+            
+            <div class="approval-box">
+                <h4>Aprobado por:</h4>
+                <p style="margin: 15px 0;"><strong>Gerencia Comercial</strong></p>
+                <p style="font-size: 13px; color: #64748b;">Partequipos S.A.S</p>
+                <div class="approval-line">Firma y Fecha</div>
+            </div>
+            
+            <div class="approval-box">
+                <h4>Autorizado por:</h4>
+                <p style="margin: 15px 0;"><strong>Gerencia General</strong></p>
+                <p style="font-size: 13px; color: #64748b;">CEO / Dirección Ejecutiva</p>
+                <div class="approval-line">Firma y Fecha</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Partequipos S.A.S - Sistema de Gestión de Transporte de Maquinaria</strong></p>
+            <p>Documento confidencial - Propiedad de Partequipos S.A.S</p>
+            <p>Generado el 21 de Octubre de 2025</p>
+            <p style="margin-top: 10px; font-size: 11px;">Para consultas técnicas contactar al Tech Lead del proyecto</p>
+        </div>
+    </div>
+</body>
+</html>

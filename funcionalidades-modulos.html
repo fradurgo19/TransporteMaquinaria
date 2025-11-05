@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funcionalidades del Sistema - Guía de Módulos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #1e40af;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 16px;
+        }
+        
+        .intro {
+            background: #eff6ff;
+            padding: 20px;
+            border-left: 4px solid #2563eb;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        
+        .intro p {
+            margin-bottom: 10px;
+        }
+        
+        .module {
+            margin-bottom: 35px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        
+        .module:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .module-header {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .module-icon {
+            font-size: 32px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .module-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .module-content {
+            padding: 25px;
+        }
+        
+        .module-content h3 {
+            color: #1e40af;
+            font-size: 16px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .description {
+            color: #475569;
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+        
+        .features {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .features h4 {
+            color: #334155;
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .features li {
+            padding: 6px 0 6px 25px;
+            position: relative;
+            color: #475569;
+            font-size: 14px;
+        }
+        
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .benefit {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 12px 15px;
+            border-radius: 6px;
+            color: #166534;
+            font-size: 14px;
+        }
+        
+        .benefit strong {
+            color: #15803d;
+        }
+        
+        .roles {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .role-badge {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .role-badge.admin {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .role-badge.user {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .role-badge.commercial {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .module {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚚 Guía de Funcionalidades</h1>
+            <p>Sistema de Gestión de Transporte de Maquinaria</p>
+            <p style="font-size: 14px; margin-top: 5px;">Partequipos S.A.S</p>
+        </div>
+
+        <div class="intro">
+            <p><strong>¿Qué es este sistema?</strong></p>
+            <p>
+                Es una plataforma web diseñada para gestionar de manera integral toda la operación de la flota de vehículos 
+                y maquinaria de Partequipos. Permite llevar un control en tiempo real de cada aspecto operativo: desde el 
+                registro de documentos hasta el seguimiento GPS, pasando por el control de combustible y las horas trabajadas.
+            </p>
+            <p style="margin-top: 10px;">
+                <strong>¿Para quién es?</strong> Para conductores, supervisores, administradores y el equipo comercial. 
+                Cada persona tiene acceso a las funciones que necesita según su rol en la empresa.
+            </p>
+        </div>
+
+        <!-- Módulo 1: Autenticación -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">🔐</div>
+                <div>
+                    <h2>Módulo de Autenticación y Seguridad</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Este módulo controla quién puede entrar al sistema y qué puede hacer cada persona. Es como la puerta 
+                    de entrada que verifica tu identidad y te da acceso solo a las funciones que necesitas para tu trabajo.
+                </div>
+
+                <div class="features">
+                    <h4>Funciones principales:</h4>
+                    <ul>
+                        <li>Inicio de sesión seguro con usuario y contraseña</li>
+                        <li>Registro de nuevos usuarios por parte del administrador</li>
+                        <li>Recuperación de contraseña en caso de olvido</li>
+                        <li>Cierre de sesión seguro</li>
+                        <li>Control de acceso según el rol asignado</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Garantiza que cada persona solo vea y modifique la información necesaria 
+                    para su trabajo, protegiendo datos sensibles de la empresa.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">👑 Administrador (acceso completo)</span>
+                    <span class="role-badge user">👤 Usuario (operaciones del día a día)</span>
+                    <span class="role-badge commercial">💼 Comercial (solicitudes de transporte)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 2: Dashboard -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">📊</div>
+                <div>
+                    <h2>Dashboard o Panel Principal</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Es la pantalla principal que ves al entrar al sistema. Muestra un resumen visual de todo lo importante 
+                    que está pasando: cuántos vehículos están activos, qué documentos están por vencer, cuánto combustible 
+                    se ha consumido, etc. Es como el tablero de instrumentos de un carro, pero para toda la flota.
+                </div>
+
+                <div class="features">
+                    <h4>Información que muestra:</h4>
+                    <ul>
+                        <li>Número de vehículos activos en operación</li>
+                        <li>Total de kilómetros recorridos en el mes</li>
+                        <li>Consumo total de combustible</li>
+                        <li>Alertas de documentos próximos a vencer (SOAT, revisión técnica, licencias)</li>
+                        <li>Gráficos y estadísticas actualizadas en tiempo real</li>
+                        <li>Accesos rápidos a las funciones más usadas</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Permite tomar decisiones rápidas basadas en datos reales. Por ejemplo, 
+                    ver de un vistazo qué vehículos necesitan mantenimiento pronto o cuál ha consumido más combustible.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador</span>
+                    <span class="role-badge user">Usuario</span>
+                    <span class="role-badge commercial">Comercial</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 3: Gestión de Equipos -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">🚛</div>
+                <div>
+                    <h2>Gestión de Equipos y Vehículos</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Aquí se guarda toda la información de cada vehículo y equipo: tractores, trailers, maquinaria pesada, etc. 
+                    Es como una ficha médica, pero para los vehículos. Incluye datos del conductor asignado, ubicación actual, 
+                    documentos legales y su estado.
+                </div>
+
+                <div class="features">
+                    <h4>Información que maneja:</h4>
+                    <ul>
+                        <li>Datos básicos: marca, placa, número de serie, tipo de vehículo</li>
+                        <li>Información del conductor asignado</li>
+                        <li>Ubicación GPS en tiempo real del vehículo</li>
+                        <li>Documentos: SOAT, revisión técnica, póliza de seguro</li>
+                        <li>Fechas de vencimiento de cada documento</li>
+                        <li>Archivos adjuntos (copias digitales de documentos)</li>
+                        <li>Estado de permisos y habilitaciones</li>
+                        <li>Historial completo del vehículo</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Nunca más se vencerá un SOAT o una revisión técnica sin que lo sepas. 
+                    El sistema te alerta con anticipación. Además, puedes ubicar cualquier vehículo en el mapa al instante.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador (puede crear, editar, eliminar)</span>
+                    <span class="role-badge user">Usuario (solo puede consultar)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 4: Horas de Operación -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">⏱️</div>
+                <div>
+                    <h2>Control de Horas de Operación</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Registra las horas que trabaja cada conductor. Es como un reloj marcador digital, pero más inteligente: 
+                    calcula automáticamente las horas extras, horas nocturnas y festivos. También registra dónde está el 
+                    conductor al momento de iniciar y terminar su jornada (usando GPS).
+                </div>
+
+                <div class="features">
+                    <h4>Funciones principales:</h4>
+                    <ul>
+                        <li>Check-in (marcar entrada): registra hora y ubicación GPS</li>
+                        <li>Check-out (marcar salida): registra hora y ubicación GPS</li>
+                        <li>Descripción de la tarea o actividad realizada</li>
+                        <li>Cálculo automático de horas trabajadas</li>
+                        <li>Cálculo automático de horas extras (según horarios establecidos)</li>
+                        <li>Identificación de horas nocturnas (multiplicador 1.35x)</li>
+                        <li>Identificación de horas en festivos (multiplicador 1.75x)</li>
+                        <li>Deducciones automáticas de tiempos de almuerzo y descanso</li>
+                        <li>Reportes exportables para nómina</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Elimina errores en el cálculo de horas extras y reduce el tiempo de 
+                    preparación de nómina de horas a minutos. Todo queda registrado con hora exacta y ubicación GPS.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador</span>
+                    <span class="role-badge user">Usuario</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 5: Combustible -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">⛽</div>
+                <div>
+                    <h2>Gestión de Combustible</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Lleva el control de todo el combustible que se le carga a cada vehículo: cuántos galones, cuánto costó, 
+                    dónde se cargó, y permite tomar foto del recibo como comprobante. También calcula el rendimiento 
+                    (kilómetros por galón) de cada vehículo.
+                </div>
+
+                <div class="features">
+                    <h4>Información que registra:</h4>
+                    <ul>
+                        <li>Vehículo que recibió combustible (por placa)</li>
+                        <li>Fecha y hora de la carga</li>
+                        <li>Cantidad de galones cargados</li>
+                        <li>Costo total de la carga</li>
+                        <li>Kilometraje inicial del vehículo</li>
+                        <li>Kilometraje final del vehículo</li>
+                        <li>Foto del recibo de combustible (como comprobante)</li>
+                        <li>Ubicación GPS donde se cargó</li>
+                        <li>Cálculo automático de rendimiento (km/galón)</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Permite detectar si algún vehículo está consumiendo más combustible de lo 
+                    normal, identificar posibles fugas o robos, y tener un control exacto del gasto en combustible por vehículo.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador</span>
+                    <span class="role-badge user">Usuario</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 6: Operaciones -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">📦</div>
+                <div>
+                    <h2>Seguimiento de Operaciones Logísticas</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Hace seguimiento a cada viaje o servicio desde que inicia hasta que termina. Es como un rastreador 
+                    de paquetes, pero para operaciones de transporte. Registra tres momentos clave: carga, inicio de ruta 
+                    y entrega, cada uno con su ubicación GPS y fotos de comprobación.
+                </div>
+
+                <div class="features">
+                    <h4>Etapas que registra:</h4>
+                    <ul>
+                        <li><strong>Carga:</strong> Cuando se carga el equipo o mercancía en el vehículo</li>
+                        <li><strong>Inicio de ruta:</strong> Cuando el vehículo sale hacia el destino</li>
+                        <li><strong>Entrega:</strong> Cuando se entrega en el destino final</li>
+                    </ul>
+                    <h4>Para cada etapa registra:</h4>
+                    <ul>
+                        <li>Fecha y hora exacta</li>
+                        <li>Ubicación GPS precisa</li>
+                        <li>Fotos de respaldo (carga, ruta, entrega)</li>
+                        <li>Notas u observaciones importantes</li>
+                        <li>Nombre del conductor responsable</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Total trazabilidad de cada operación. Si hay algún reclamo o duda, tienes 
+                    fotos, ubicaciones GPS y horas exactas de cada momento del servicio.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador</span>
+                    <span class="role-badge user">Usuario</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 7: Checklist -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">✅</div>
+                <div>
+                    <h2>Checklist Pre-operacional</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Es una lista de verificación que el conductor debe completar cada día antes de empezar a operar el vehículo. 
+                    Revisa el estado general del vehículo: llantas, luces, frenos, niveles de aceite, etc. Si encuentra algún 
+                    problema, lo reporta con foto incluida.
+                </div>
+
+                <div class="features">
+                    <h4>Elementos que verifica:</h4>
+                    <ul>
+                        <li>Estado general del vehículo</li>
+                        <li>Condición de llantas y frenos</li>
+                        <li>Funcionamiento de luces y señales</li>
+                        <li>Niveles de fluidos (aceite, refrigerante, etc.)</li>
+                        <li>Limpieza y orden de la cabina</li>
+                        <li>Presencia de kit de carretera y documentos</li>
+                        <li>Reporte de cualquier anomalía o daño detectado</li>
+                        <li>Foto del estado actual del vehículo</li>
+                        <li>Calificación: aprobado o no aprobado</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Previene accidentes por fallas mecánicas y garantiza que los vehículos salgan 
+                    en buen estado. Si hay un problema, se detecta antes de empezar el viaje, no durante el servicio.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador</span>
+                    <span class="role-badge user">Usuario</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 8: Solicitudes -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-icon">📝</div>
+                <div>
+                    <h2>Solicitudes de Transporte</h2>
+                </div>
+            </div>
+            <div class="module-content">
+                <h3>¿Qué hace?</h3>
+                <div class="description">
+                    Es el módulo donde se crean y gestionan las solicitudes de servicio de transporte. El equipo comercial 
+                    crea solicitudes cuando un cliente necesita trasladar maquinaria o equipo. Los administradores revisan, 
+                    aprueban y asignan vehículos y conductores a cada solicitud.
+                </div>
+
+                <div class="features">
+                    <h4>Información de cada solicitud:</h4>
+                    <ul>
+                        <li>Equipo a transportar (marca, modelo, peso, dimensiones)</li>
+                        <li>Punto de origen (de dónde se recoge)</li>
+                        <li>Punto de destino (a dónde se lleva)</li>
+                        <li>Fecha y hora requerida para el servicio</li>
+                        <li>Estado de la solicitud: pendiente, aprobada, en proceso, completada, rechazada</li>
+                        <li>Vehículo asignado para el transporte</li>
+                        <li>Conductor asignado</li>
+                        <li>Notas adicionales o requisitos especiales</li>
+                        <li>Historial de cambios de estado</li>
+                    </ul>
+                </div>
+
+                <div class="benefit">
+                    <strong>Beneficio:</strong> Organiza todas las solicitudes en un solo lugar, evita que se pierdan o 
+                    olviden servicios, y permite hacer seguimiento en tiempo real del estado de cada solicitud desde que 
+                    se crea hasta que se completa.
+                </div>
+
+                <div class="roles">
+                    <span class="role-badge admin">Administrador (gestiona todo)</span>
+                    <span class="role-badge user">Usuario (consulta)</span>
+                    <span class="role-badge commercial">Comercial (crea solicitudes)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Sistema de Gestión de Transporte de Maquinaria</strong></p>
+            <p>Partequipos S.A.S - Documento de Funcionalidades</p>
+            <p style="margin-top: 10px;">Elaborado por: Frank Anderson Duran Gonzalez</p>
+            <p>Ingeniero de Digitalización y Automatización</p>
+            <p style="margin-top: 10px; font-size: 12px;">Octubre 2025</p>
+        </div>
+    </div>
+</body>
+</html>
