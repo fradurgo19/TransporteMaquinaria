@@ -23,62 +23,80 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const url = `${supabaseUrl}/rest/v1/users?id=eq.${userId}&select=*`;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      try {
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'apikey': anonKey,
-            'Authorization': `Bearer ${anonKey}`,
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal
+      if (!isMountedRef.current) return;
+
+      console.log('🔍 Fetching user profile for ID:', userId);
+
+      // Agregar timeout a la consulta
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 10 segundos')), 10000);
+      });
+
+      // Usar el cliente de Supabase que incluye automáticamente el token de autenticación
+      const queryPromise = supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      const result = await Promise.race([queryPromise, timeoutPromise]) as { data: any; error: any };
+
+      if (!isMountedRef.current) return;
+
+      const { data, error } = result;
+
+      if (error) {
+        console.error('❌ Error fetching user profile:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
         });
         
-        clearTimeout(timeoutId);
-
-        if (!isMountedRef.current) return;
-
-        if (!response.ok) {
-          console.error('Error fetching user profile:', response.status);
-          setUser(null);
-          return;
+        // Si es un error de permisos, intentar obtener el usuario desde auth.users
+        if (error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy')) {
+          console.warn('⚠️ Error de permisos RLS, intentando obtener datos básicos del usuario...');
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            console.log('✅ Usando datos de auth.users como fallback');
+            setUser({
+              id: authUser.id,
+              username: authUser.email?.split('@')[0] || 'user',
+              email: authUser.email || '',
+              role: 'user' as UserRole, // Rol por defecto
+              full_name: authUser.user_metadata?.full_name || '',
+              phone: authUser.user_metadata?.phone || '',
+              createdAt: authUser.created_at || new Date().toISOString(),
+            });
+            return;
+          }
         }
-
-        const responseText = await response.text();
-        const responseData = responseText ? JSON.parse(responseText) : null;
-        const data = Array.isArray(responseData) ? responseData[0] : responseData;
-
-        if (data) {
-          setUser({
-            id: data.id,
-            username: data.username,
-            email: data.email,
-            role: data.role as UserRole,
-            full_name: data.full_name,
-            phone: data.phone,
-            createdAt: data.created_at,
-          });
-        } else {
-          setUser(null);
-        }
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          console.error('Request timeout fetching user profile');
-        } else {
-          console.error('Fetch error:', fetchError);
-        }
-        throw fetchError;
+        
+        setUser(null);
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
+
+      if (data) {
+        console.log('✅ User profile fetched:', data);
+        setUser({
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          role: data.role as UserRole,
+          full_name: data.full_name,
+          phone: data.phone,
+          createdAt: data.created_at,
+        });
+      } else {
+        console.warn('⚠️ No user data returned');
+        setUser(null);
+      }
+    } catch (error: any) {
+      console.error('❌ Exception in fetchUserProfile:', error);
+      if (error.message?.includes('Timeout')) {
+        console.error('⏱️ La consulta se quedó colgada. Probable problema con políticas RLS.');
+      }
       if (isMountedRef.current) {
         setUser(null);
       }
@@ -90,22 +108,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('🔄 Initializing auth...');
+        
+        // Obtener sesión persistida
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ Error getting session:', sessionError);
+          if (isMountedRef.current) {
+            setUser(null);
+            setIsLoading(false);
+          }
+          return;
+        }
         
         if (!isMountedRef.current) return;
         
         if (session?.user) {
-          await fetchUserProfile(session.user.id);
+          console.log('✅ Session found, user:', session.user.email);
+          console.log('🔄 Restoring user profile...');
+          
+          // Intentar obtener el perfil, pero si falla, usar datos básicos de auth
+          try {
+            await fetchUserProfile(session.user.id);
+          } catch (error) {
+            console.warn('⚠️ Error fetching profile, using auth data as fallback:', error);
+            // Si falla, usar datos básicos de la sesión
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser && isMountedRef.current) {
+              setUser({
+                id: authUser.id,
+                username: authUser.email?.split('@')[0] || 'user',
+                email: authUser.email || '',
+                role: 'user' as UserRole,
+                full_name: authUser.user_metadata?.full_name || '',
+                phone: authUser.user_metadata?.phone || '',
+                createdAt: authUser.created_at || new Date().toISOString(),
+              });
+            }
+          }
         } else {
+          console.log('ℹ️ No active session found');
           setUser(null);
         }
       } catch (error) {
-        console.error('Error in auth initialization:', error);
+        console.error('❌ Error in auth initialization:', error);
         if (isMountedRef.current) {
           setUser(null);
         }
       } finally {
         if (isMountedRef.current) {
+          console.log('✅ Auth initialization complete');
           setIsLoading(false);
         }
       }
@@ -113,15 +166,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initAuth();
 
+    // Escuchar cambios en el estado de autenticación
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔄 Auth state changed:', event, session?.user?.email);
+        
         if (!isMountedRef.current) return;
         
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
+        // Manejar diferentes eventos
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            console.log('👤 User signed in/refreshed, fetching profile...');
+            await fetchUserProfile(session.user.id);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log('🚪 User signed out, clearing user');
           setUser(null);
+        } else if (event === 'USER_UPDATED') {
+          if (session?.user) {
+            console.log('👤 User updated, refreshing profile...');
+            await fetchUserProfile(session.user.id);
+          }
         }
+        
         if (isMountedRef.current) {
           setIsLoading(false);
         }
@@ -136,17 +203,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔐 Attempting login for:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Login error:', error);
+        throw error;
+      }
 
       if (data.user) {
+        console.log('✅ Login successful, user ID:', data.user.id);
+        console.log('📧 User email:', data.user.email);
+        
         await fetchUserProfile(data.user.id);
         
-        // Solicitar permiso de ubicación después del login
+        // Solicitar permiso de ubicación después del login (no bloquea el flujo)
+        // Esto se hace de forma asíncrona y no afecta el login
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -154,13 +230,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               localStorage.setItem('geoPermissionGranted', 'true');
             },
             (error) => {
+              // No es crítico si se deniega, solo registramos el warning
               console.warn('⚠️ Permiso de ubicación denegado:', error.message);
+              localStorage.setItem('geoPermissionGranted', 'false');
+            },
+            {
+              timeout: 5000,
+              enableHighAccuracy: false
             }
           );
         }
+      } else {
+        console.warn('⚠️ Login successful but no user data');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login exception:', error);
       throw error;
     }
   };

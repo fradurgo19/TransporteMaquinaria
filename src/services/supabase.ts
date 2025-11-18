@@ -13,8 +13,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: window.localStorage,
+    storageKey: 'sb-auth-token',
+    flowType: 'pkce',
   },
   db: {
     schema: 'public',
+  },
+  global: {
+    headers: {
+      'x-client-info': 'transport-management-app',
+    },
   },
 });
