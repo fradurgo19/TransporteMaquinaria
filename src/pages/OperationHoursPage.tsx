@@ -3,14 +3,17 @@ import { MainLayout } from '../templates/MainLayout';
 import { Card, CardHeader, CardBody } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
+import { Input } from '../atoms/Input';
+import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Clock, CheckCircle } from 'lucide-react';
+import { Clock, CheckCircle, Plus, X } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { format, parseISO } from 'date-fns';
 import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
+import { supabase } from '../services/supabase';
 
 interface OperationHour {
   id: string;
@@ -32,6 +35,15 @@ export const OperationHoursPage: React.FC = () => {
   const { user } = useAuth();
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude } = useGeolocation();
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualFormData, setManualFormData] = useState({
+    vehicle_plate: '',
+    driver_name: '',
+    check_in_time: '',
+    check_out_time: '',
+    is_compensatory: false,
+    notes: '',
+  });
 
   // Admins ven todos los registros, usuarios solo los de su vehículo
   const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
@@ -92,6 +104,66 @@ export const OperationHoursPage: React.FC = () => {
     }
   };
 
+  const handleManualCreate = async () => {
+    if (!manualFormData.vehicle_plate || !manualFormData.driver_name) {
+      alert('Completa los campos requeridos');
+      return;
+    }
+
+    try {
+      const payload: any = {
+        vehicle_plate: manualFormData.vehicle_plate,
+        driver_name: manualFormData.driver_name,
+        task_description: manualFormData.is_compensatory ? 'Día Compensatorio' : 'Registro manual por admin',
+        activity_type: 'regular',
+        department: 'transport',
+        created_by: user?.id,
+        created_by_admin: true,
+        is_compensatory: manualFormData.is_compensatory,
+        notes: manualFormData.notes,
+      };
+
+      if (manualFormData.is_compensatory) {
+        // Compensatorio: solo fecha, sin horas
+        payload.check_in_time = `${manualFormData.check_in_time}T00:00:00`;
+        payload.check_out_time = null;
+        payload.status = 'compensatory';
+      } else {
+        // Normal: con horas de entrada y salida
+        payload.check_in_time = manualFormData.check_in_time;
+        payload.check_out_time = manualFormData.check_out_time || null;
+        payload.status = manualFormData.check_out_time ? 'completed' : 'in_progress';
+      }
+
+      const { data, error } = await supabase
+        .from('operation_hours')
+        .insert([payload])
+        .select();
+
+      if (error) {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+        return;
+      }
+
+      console.log('✅ Registro manual creado:', data);
+      alert('✅ Registro creado exitosamente');
+      
+      setShowManualForm(false);
+      setManualFormData({
+        vehicle_plate: '',
+        driver_name: '',
+        check_in_time: '',
+        check_out_time: '',
+        is_compensatory: false,
+        notes: '',
+      });
+    } catch (error: any) {
+      console.error('Error:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
   const columns = [
     { 
       key: 'driver_name', 
@@ -129,14 +201,20 @@ export const OperationHoursPage: React.FC = () => {
     {
       key: 'status',
       label: 'Estado',
-      render: (item: OperationHour) => 
-        item.status === 'in_progress' ? (
+      render: (item: any) => {
+        if (item.is_compensatory) {
+          return <Badge variant="info">Compensatorio</Badge>;
+        }
+        return item.status === 'in_progress' ? (
           <Badge variant="warning">En Progreso</Badge>
         ) : (
           <Badge variant="success">Completado</Badge>
-        ),
+        );
+      },
     },
   ];
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
 
   return (
     <MainLayout>
@@ -148,7 +226,110 @@ export const OperationHoursPage: React.FC = () => {
               Registra tu jornada de trabajo automáticamente
             </p>
           </div>
+          {isAdmin && (
+            <Button onClick={() => setShowManualForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Registro Manual
+            </Button>
+          )}
         </div>
+
+        {/* Modal de Registro Manual (solo admin) */}
+        {showManualForm && isAdmin && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <Card className="max-w-2xl w-full">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-900">Registro Manual de Horas</h2>
+                  <button onClick={() => setShowManualForm(false)}>
+                    <X className="h-5 w-5 text-gray-500" />
+                  </button>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={manualFormData.is_compensatory}
+                        onChange={(e) => setManualFormData({ ...manualFormData, is_compensatory: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-medium text-blue-900">
+                        Marcar como Día Compensatorio (sin horas de trabajo)
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Placa del Vehículo *"
+                      value={manualFormData.vehicle_plate}
+                      onChange={(e) => setManualFormData({ ...manualFormData, vehicle_plate: e.target.value.toUpperCase() })}
+                      placeholder="ABC123"
+                      required
+                    />
+                    <Input
+                      label="Nombre del Conductor *"
+                      value={manualFormData.driver_name}
+                      onChange={(e) => setManualFormData({ ...manualFormData, driver_name: e.target.value })}
+                      placeholder="Nombre completo"
+                      required
+                    />
+                  </div>
+
+                  {!manualFormData.is_compensatory && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          type="datetime-local"
+                          label="Hora de Entrada *"
+                          value={manualFormData.check_in_time}
+                          onChange={(e) => setManualFormData({ ...manualFormData, check_in_time: e.target.value })}
+                          required
+                        />
+                        <Input
+                          type="datetime-local"
+                          label="Hora de Salida"
+                          value={manualFormData.check_out_time}
+                          onChange={(e) => setManualFormData({ ...manualFormData, check_out_time: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {manualFormData.is_compensatory && (
+                    <Input
+                      type="date"
+                      label="Fecha del Día Compensatorio *"
+                      value={manualFormData.check_in_time}
+                      onChange={(e) => setManualFormData({ ...manualFormData, check_in_time: e.target.value })}
+                      required
+                    />
+                  )}
+
+                  <TextArea
+                    label="Notas"
+                    value={manualFormData.notes}
+                    onChange={(e) => setManualFormData({ ...manualFormData, notes: e.target.value })}
+                    placeholder="Motivo, observaciones..."
+                    rows={3}
+                  />
+
+                  <div className="flex justify-end gap-3 pt-4 border-t">
+                    <Button variant="secondary" onClick={() => setShowManualForm(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleManualCreate}>
+                      Crear Registro
+                    </Button>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        )}
 
         {/* Botones de Control */}
         <Card>

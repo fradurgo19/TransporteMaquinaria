@@ -80,42 +80,42 @@ export const DashboardPage: React.FC = () => {
                   <p>No hay alertas pendientes</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {alerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50"
-                    >
-                      <AlertCircle
-                        className={`h-5 w-5 mt-0.5 ${
-                          alert.type === 'error'
-                            ? 'text-red-500'
-                            : alert.type === 'warning'
-                            ? 'text-yellow-500'
-                            : 'text-blue-500'
-                        }`}
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">{alert.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">
+                  <div
+                    key={alert.id}
+                    className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50"
+                  >
+                    <AlertCircle
+                      className={`h-5 w-5 mt-0.5 ${
+                        alert.type === 'error'
+                          ? 'text-red-500'
+                          : alert.type === 'warning'
+                          ? 'text-yellow-500'
+                          : 'text-blue-500'
+                      }`}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900">{alert.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">
                           {format(new Date(alert.timestamp), 'dd/MM/yyyy HH:mm')}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          alert.type === 'error'
-                            ? 'error'
-                            : alert.type === 'warning'
-                            ? 'warning'
-                            : 'info'
-                        }
-                        size="sm"
-                      >
-                        {alert.type}
-                      </Badge>
+                      </p>
                     </div>
-                  ))}
-                </div>
+                    <Badge
+                      variant={
+                        alert.type === 'error'
+                          ? 'error'
+                          : alert.type === 'warning'
+                          ? 'warning'
+                          : 'info'
+                      }
+                      size="sm"
+                    >
+                      {alert.type}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
               )}
             </CardBody>
           </Card>
@@ -132,24 +132,24 @@ export const DashboardPage: React.FC = () => {
                   <p>No hay vehículos registrados</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {equipmentData.data.slice(0, 5).map((vehicle) => (
-                    <div
+                  <div
                       key={vehicle.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
-                    >
-                      <div>
+                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                  >
+                    <div>
                         <p className="font-medium text-gray-900">{vehicle.license_plate}</p>
                         <p className="text-sm text-gray-500">{vehicle.site_location}</p>
-                      </div>
-                      <Badge
-                        variant={vehicle.status === 'active' ? 'success' : 'warning'}
-                      >
-                        {vehicle.status === 'active' ? 'Activo' : vehicle.status}
-                      </Badge>
                     </div>
-                  ))}
-                </div>
+                    <Badge
+                        variant={vehicle.status === 'active' ? 'success' : 'warning'}
+                    >
+                        {vehicle.status === 'active' ? 'Activo' : vehicle.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
               )}
             </CardBody>
           </Card>

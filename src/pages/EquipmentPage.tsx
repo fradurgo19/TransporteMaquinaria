@@ -137,7 +137,7 @@ export const EquipmentPage: React.FC = () => {
     setIsUploading(true);
     
     try {
-      console.log('📤 Subiendo documento:', uploadData);
+    console.log('📤 Subiendo documento:', uploadData);
       
       const equip = equipment.find(e => e.id === uploadData.equipmentId);
       if (!equip) {
@@ -186,7 +186,7 @@ export const EquipmentPage: React.FC = () => {
 
       console.log('✅ Documento subido y guardado');
       alert('✅ Documento subido exitosamente');
-      setShowUploadModal(false);
+    setShowUploadModal(false);
       setUploadData({ equipmentId: '', documentType: 'tecno', file: null });
       setPreviewUrl('');
     } catch (error: any) {
@@ -282,24 +282,24 @@ export const EquipmentPage: React.FC = () => {
     try {
       await createEquipment.mutateAsync(newEquipment);
       console.log('✅ Equipo creado exitosamente');
-      // Resetear formulario
-      setNewEquipment({
-        driver_name: '',
-        site_location: '',
-        brand: '',
-        license_plate: '',
-        serial_number: '',
-        vehicle_type: 'tractor',
-        technical_inspection_expiration: '',
-        soat_expiration: '',
-        insurance_policy_expiration: '',
-        driver_license_expiration: '',
-        permit_status: '',
-        status: 'active',
-        notes: '',
-      });
-      setFormErrors({});
-      setShowAddModal(false);
+        // Resetear formulario
+        setNewEquipment({
+          driver_name: '',
+          site_location: '',
+          brand: '',
+          license_plate: '',
+          serial_number: '',
+          vehicle_type: 'tractor',
+          technical_inspection_expiration: '',
+          soat_expiration: '',
+          insurance_policy_expiration: '',
+          driver_license_expiration: '',
+          permit_status: '',
+          status: 'active',
+          notes: '',
+        });
+        setFormErrors({});
+        setShowAddModal(false);
       // Volver a la primera página para ver el nuevo equipo
       setCurrentPage(1);
     } catch (error: any) {
@@ -564,8 +564,8 @@ export const EquipmentPage: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Subir
+                    <Upload className="h-4 w-4 mr-2" />
+                    Subir
                       </>
                     )}
                   </Button>
@@ -596,7 +596,7 @@ export const EquipmentPage: React.FC = () => {
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h2 className="text-xl font-semibold text-gray-900">Lista de Equipos</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Lista de Equipos</h2>
               
               {/* Búsqueda y Filtros */}
               <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -722,14 +722,14 @@ export const EquipmentPage: React.FC = () => {
                               >
                                 <Eye className="h-3 w-3" />
                               </a>
-                            )}
-                            <button
-                              onClick={() => openUploadModal(equip.id, 'tecno')}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Subir documento"
-                            >
-                              <Upload className="h-3 w-3" />
-                            </button>
+                          )}
+                          <button
+                            onClick={() => openUploadModal(equip.id, 'tecno')}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Subir documento"
+                          >
+                            <Upload className="h-3 w-3" />
+                          </button>
                           </div>
                         </div>
                       </td>
@@ -763,14 +763,14 @@ export const EquipmentPage: React.FC = () => {
                               >
                                 <Eye className="h-3 w-3" />
                               </a>
-                            )}
-                            <button
-                              onClick={() => openUploadModal(equip.id, 'soat')}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Subir documento"
-                            >
-                              <Upload className="h-3 w-3" />
-                            </button>
+                          )}
+                          <button
+                            onClick={() => openUploadModal(equip.id, 'soat')}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Subir documento"
+                          >
+                            <Upload className="h-3 w-3" />
+                          </button>
                           </div>
                         </div>
                       </td>
@@ -804,14 +804,14 @@ export const EquipmentPage: React.FC = () => {
                               >
                                 <Eye className="h-3 w-3" />
                               </a>
-                            )}
-                            <button
-                              onClick={() => openUploadModal(equip.id, 'poliza')}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Subir documento"
-                            >
-                              <Upload className="h-3 w-3" />
-                            </button>
+                          )}
+                          <button
+                            onClick={() => openUploadModal(equip.id, 'poliza')}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Subir documento"
+                          >
+                            <Upload className="h-3 w-3" />
+                          </button>
                           </div>
                         </div>
                       </td>
@@ -845,14 +845,14 @@ export const EquipmentPage: React.FC = () => {
                               >
                                 <Eye className="h-3 w-3" />
                               </a>
-                            )}
-                            <button
-                              onClick={() => openUploadModal(equip.id, 'licencia')}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Subir documento"
-                            >
-                              <Upload className="h-3 w-3" />
-                            </button>
+                          )}
+                          <button
+                            onClick={() => openUploadModal(equip.id, 'licencia')}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Subir documento"
+                          >
+                            <Upload className="h-3 w-3" />
+                          </button>
                           </div>
                         </div>
                       </td>
