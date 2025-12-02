@@ -5,11 +5,13 @@ import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { TextArea } from '../atoms/TextArea';
 import { Badge } from '../atoms/Badge';
-import { RefreshCw, Download, Upload, Edit2, Save, X, FileSpreadsheet } from 'lucide-react';
+import { RefreshCw, Download, Upload, Edit2, Save, X, FileSpreadsheet, MapPin } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useOvertimeTracking, useSyncOvertimeTracking, useUpdateOvertimeTracking, OvertimeTracking } from '../hooks/useOvertimeTracking';
+import { parseGPSExcel, uploadGPSData, analyzeAndUpdateRoute } from '../services/gpsService';
+import { GPSRouteMap } from '../components/GPSRouteMap';
 
 export const OvertimeTrackingPage: React.FC = () => {
   useProtectedRoute(['admin']);
@@ -20,6 +22,8 @@ export const OvertimeTrackingPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<{ ubicacion: string; actividad: string }>({ ubicacion: '', actividad: '' });
+  const [uploadingGPS, setUploadingGPS] = useState<string | null>(null);
+  const [viewingMap, setViewingMap] = useState<string | null>(null);
 
   const { data: overtimeData, isLoading } = useOvertimeTracking({
     page: currentPage,
@@ -62,6 +66,51 @@ export const OvertimeTrackingPage: React.FC = () => {
   const cancelEdit = () => {
     setEditingId(null);
     setEditData({ ubicacion: '', actividad: '' });
+  };
+
+  const handleGPSUpload = async (file: File, overtimeId: string) => {
+    try {
+      setUploadingGPS(overtimeId);
+      console.log('📁 Procesando archivo Excel GPS...');
+      
+      // Parsear Excel
+      const records = await parseGPSExcel(file);
+      console.log(`✅ ${records.length} registros GPS parseados`);
+      
+      // Subir a Supabase
+      await uploadGPSData(overtimeId, records);
+      console.log('✅ Datos GPS subidos');
+      
+      // Analizar y actualizar
+      const analysis = await analyzeAndUpdateRoute(overtimeId);
+      console.log('✅ Ruta analizada:', analysis);
+      
+      alert(`✅ GPS procesado correctamente\n\n` +
+            `Inicio: ${analysis.entrada ? new Date(analysis.entrada).toLocaleString('es-CO') : 'N/A'}\n` +
+            `Fin: ${analysis.salida ? new Date(analysis.salida).toLocaleString('es-CO') : 'N/A'}\n` +
+            `Total registros: ${analysis.total_records}`);
+      
+      // Refrescar datos
+      window.location.reload();
+    } catch (error: any) {
+      console.error('❌ Error procesando GPS:', error);
+      alert(`Error procesando GPS: ${error.message}`);
+    } finally {
+      setUploadingGPS(null);
+    }
+  };
+
+  const triggerGPSUpload = (overtimeId: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls';
+    input.onchange = (e: any) => {
+      const file = e.target?.files?.[0];
+      if (file) {
+        handleGPSUpload(file, overtimeId);
+      }
+    };
+    input.click();
   };
 
   const formatDecimal = (value: number | null) => {
@@ -245,20 +294,42 @@ export const OvertimeTrackingPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-2 py-2 text-center">
-                            {isEditing ? (
-                              <div className="flex gap-1 justify-center">
-                                <Button size="sm" onClick={() => saveEdit(record.id)} disabled={updateMutation.isPending}>
-                                  <Save className="h-3 w-3" />
-                                </Button>
-                                <Button size="sm" variant="secondary" onClick={cancelEdit}>
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button size="sm" variant="ghost" onClick={() => startEdit(record)}>
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                            )}
+                            <div className="flex gap-1 justify-center">
+                              {isEditing ? (
+                                <>
+                                  <Button size="sm" onClick={() => saveEdit(record.id)} disabled={updateMutation.isPending}>
+                                    <Save className="h-3 w-3" />
+                                  </Button>
+                                  <Button size="sm" variant="secondary" onClick={cancelEdit}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    variant="secondary" 
+                                    onClick={() => triggerGPSUpload(record.id)}
+                                    disabled={uploadingGPS === record.id}
+                                    title="Cargar Excel GPS"
+                                  >
+                                    {uploadingGPS === record.id ? '...' : <Upload className="h-3 w-3" />}
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="secondary" 
+                                    onClick={() => setViewingMap(record.id)}
+                                    disabled={!record.gps_data_uploaded}
+                                    title="Ver ruta GPS"
+                                  >
+                                    <MapPin className="h-3 w-3" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => startEdit(record)}>
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -325,6 +396,14 @@ export const OvertimeTrackingPage: React.FC = () => {
           </CardBody>
         </Card>
       </div>
+
+      {/* Modal de Mapa GPS */}
+      {viewingMap && (
+        <GPSRouteMap 
+          overtimeTrackingId={viewingMap} 
+          onClose={() => setViewingMap(null)} 
+        />
+      )}
     </MainLayout>
   );
 };
