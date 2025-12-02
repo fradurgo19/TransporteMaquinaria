@@ -422,10 +422,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(false);
           }
         } else if (event === 'USER_UPDATED') {
-          if (session?.user) {
-            console.log('👤 User updated, refreshing profile...');
-            await fetchUserProfile(session.user.id, true); // Forzar refresh
-          }
+          // No refrescar perfil en cada update para evitar timeouts
+          // El usuario se actualiza solo cuando hace login o manualmente
+          console.log('👤 User updated event, manteniendo usuario actual en cache');
+          return;
         }
       }
     );
