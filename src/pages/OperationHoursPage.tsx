@@ -11,7 +11,6 @@ import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { format, parseISO } from 'date-fns';
 import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 
 interface OperationHour {
   id: string;
@@ -47,9 +46,6 @@ export const OperationHoursPage: React.FC = () => {
   const { startWork, finishWork } = useOperationHoursMutation();
 
   const operationHours = operationHoursData?.data || [];
-
-  // Subscripción en tiempo real para actualizar automáticamente
-  useRealtimeSubscription('operation_hours', ['operation_hours']);
 
   const handleStartWork = async () => {
     if (!selectedEquipment?.license_plate || !user) {

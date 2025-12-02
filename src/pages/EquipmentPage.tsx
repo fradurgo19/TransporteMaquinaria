@@ -12,7 +12,6 @@ import { format, differenceInDays, parseISO } from 'date-fns';
 import { supabase } from '../services/supabase';
 import { useEquipment, useEquipmentMutation } from '../hooks/useEquipment';
 import { uploadFile, compressImage } from '../services/uploadService';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 
 interface Equipment {
   id: string;
@@ -102,9 +101,6 @@ export const EquipmentPage: React.FC = () => {
 
   const equipment = equipmentData?.data || [];
   const totalPages = equipmentData?.totalPages || 1;
-
-  // Subscripción en tiempo real
-  useRealtimeSubscription('equipment', ['equipment']);
 
   const openUploadModal = (equipmentId: string, docType: 'tecno' | 'soat' | 'poliza' | 'licencia') => {
     setUploadData({
