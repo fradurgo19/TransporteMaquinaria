@@ -5,15 +5,17 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      refetchOnMount: true, // Cambiar a true para refrescar al montar
-      refetchOnReconnect: true, // Refrescar al reconectar
-      retry: 1,
-      staleTime: 1 * 60 * 1000, // Reducir a 1 minuto
-      gcTime: 5 * 60 * 1000, // Reducir a 5 minutos
+      refetchOnMount: 'always', // Siempre refrescar al montar
+      refetchOnReconnect: false,
+      retry: 2,
+      staleTime: 0, // Siempre considerar datos como stale
+      gcTime: 5 * 60 * 1000,
       structuralSharing: true,
+      networkMode: 'online', // Solo hacer queries cuando hay conexión
     },
     mutations: {
-      retry: 0,
+      retry: 1,
+      networkMode: 'online',
     },
   },
 });
