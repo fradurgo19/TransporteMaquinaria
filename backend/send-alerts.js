@@ -1,22 +1,39 @@
 // Script para enviar alertas de vencimiento
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// Cargar .env desde la carpeta correcta
+config({ path: join(__dirname, '.env') });
+
+// Hardcoded config (mientras dotenv no funciona)
+const SUPABASE_URL = 'https://ilufjftwomzjghhesixt.supabase.co';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsdWZqZnR3b216amdoaGVzaXh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzQ5NDA0NSwiZXhwIjoyMDc5MDcwMDQ1fQ.ODF_lB6lbyLnN00lTE1aU2vfkq1XxOP1iAK74T31uDw';
+
+// Destinatarios por departamento
+const EMAIL_RECIPIENTS = {
+  transport: [
+    'auxiliar.logisticamq@partequipos.com',
+    'logisticamq@partequipos.com',
+    'lgonzalez@partequipos.com'
+  ],
+  logistics: ['bodega.medellin@partequipos.com']
+};
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT),
+  host: 'smtp.gmail.com',
+  port: 587,
   secure: false,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: 'fradurgo19@gmail.com',
+    pass: 'asovvyyfobpuzzvd',
   },
 });
 
@@ -145,9 +162,11 @@ async function sendDailyAlerts() {
     console.log(`📧 Procesando ${pendingDocs.length} alertas...`);
 
     for (const doc of pendingDocs) {
-      const recipient = doc.department === 'transport' 
-        ? process.env.EMAIL_TRANSPORT 
-        : process.env.EMAIL_LOGISTICS;
+      const recipients = doc.department === 'transport' 
+        ? EMAIL_RECIPIENTS.transport 
+        : EMAIL_RECIPIENTS.logistics;
+      
+      const recipientList = recipients.join(', ');
 
       const docLabel = getDocumentLabel(doc.document_type);
       const urgency = doc.days_until_expiration === 5 ? 'URGENTE' : 'ALERTA';
@@ -157,8 +176,8 @@ async function sendDailyAlerts() {
 
       try {
         await transporter.sendMail({
-          from: `"Partequipos Sistema" <${process.env.SMTP_USER}>`,
-          to: recipient,
+          from: '"Partequipos Sistema" <fradurgo19@gmail.com>',
+          to: recipients, // Array de emails
           subject: subject,
           html: html,
         });
@@ -169,13 +188,13 @@ async function sendDailyAlerts() {
           document_type: doc.document_type,
           expiration_date: doc.expiration_date,
           notification_type: doc.days_until_expiration === 10 ? '10_days' : '5_days',
-          sent_to: recipient,
+          sent_to: recipientList,
           email_subject: subject,
           email_body: html,
           status: 'sent',
         });
 
-        console.log(`✅ Email enviado: ${doc.license_plate} → ${recipient}`);
+        console.log(`✅ Email enviado: ${doc.license_plate} → ${recipientList}`);
       } catch (emailError) {
         console.error(`❌ Error enviando email para ${doc.license_plate}:`, emailError);
         
@@ -185,7 +204,7 @@ async function sendDailyAlerts() {
           document_type: doc.document_type,
           expiration_date: doc.expiration_date,
           notification_type: doc.days_until_expiration === 10 ? '10_days' : '5_days',
-          sent_to: recipient,
+          sent_to: recipientList,
           email_subject: subject,
           status: 'failed',
         });

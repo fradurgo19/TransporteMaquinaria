@@ -87,15 +87,15 @@ WHERE e.status = 'active'
 CREATE OR REPLACE FUNCTION get_pending_notifications()
 RETURNS TABLE (
   equipment_id UUID,
-  license_plate VARCHAR,
-  driver_name VARCHAR,
-  brand VARCHAR,
-  site_location VARCHAR,
-  department VARCHAR,
-  document_type VARCHAR,
+  license_plate TEXT,
+  driver_name TEXT,
+  brand TEXT,
+  site_location TEXT,
+  department TEXT,
+  document_type TEXT,
   expiration_date DATE,
   days_until_expiration INTEGER,
-  notification_type VARCHAR
+  notification_type TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -110,9 +110,9 @@ BEGIN
     d.expiration_date,
     d.days_until_expiration,
     CASE 
-      WHEN d.days_until_expiration = 10 THEN '10_days'::VARCHAR
-      WHEN d.days_until_expiration = 5 THEN '5_days'::VARCHAR
-    END as notification_type
+      WHEN d.days_until_expiration = 10 THEN '10_days'
+      WHEN d.days_until_expiration = 5 THEN '5_days'
+    END::TEXT as notification_type
   FROM documents_expiring_soon d
   WHERE NOT EXISTS (
     -- No enviar si ya se envió una notificación del mismo tipo hoy
