@@ -36,9 +36,15 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     {
       path: '/dashboard',
-      label: 'Dashboard',
+      label: 'Dashboard Transport',
       icon: LayoutDashboard,
-      roles: ['admin'], // Solo administradores
+      roles: ['admin'], // Solo admin de transport
+    },
+    {
+      path: '/logistics-dashboard',
+      label: 'Dashboard Logística',
+      icon: LayoutDashboard,
+      roles: ['admin_logistics'], // Solo admin de logística
     },
     {
       path: '/equipment',

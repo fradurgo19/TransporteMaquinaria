@@ -14,6 +14,7 @@ import { ChecklistPage } from './pages/ChecklistPage';
 import { TransportRequestsPage } from './pages/TransportRequestsPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
 import { TrackingPage } from './pages/TrackingPage';
+import { LogisticsDashboardPage } from './pages/LogisticsDashboardPage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { Spinner } from './atoms/Spinner';
 
@@ -65,8 +66,13 @@ const DashboardRedirect: React.FC = () => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  // Admin de logística y usuarios de logística van a gestión de entregas
-  if (user?.role === 'admin_logistics' || user?.role === 'logistics') {
+  // Admin de logística va a su dashboard
+  if (user?.role === 'admin_logistics') {
+    return <Navigate to="/logistics-dashboard" replace />;
+  }
+  
+  // Usuarios de logística van a gestión de entregas
+  if (user?.role === 'logistics') {
     return <Navigate to="/deliveries" replace />;
   }
   
@@ -164,6 +170,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <TransportRequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/logistics-dashboard"
+        element={
+          <ProtectedRoute>
+            <LogisticsDashboardPage />
           </ProtectedRoute>
         }
       />

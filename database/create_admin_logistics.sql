@@ -101,5 +101,3 @@ USING (
 -- Verificar
 SELECT email, role FROM users WHERE role IN ('admin_logistics', 'logistics');
 
-COMMENT ON ROLE admin_logistics IS 'Administrador del departamento de logística';
-
