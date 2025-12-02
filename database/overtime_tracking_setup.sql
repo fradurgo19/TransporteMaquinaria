@@ -108,61 +108,73 @@ BEGIN
   END IF;
   
   -- Validaciones de entrada/salida según día
-  -- Lunes-Jueves: entrada 7:00 (0.291667), salida 17:00 (0.708333)
-  -- Viernes: entrada 7:00 (0.291667), salida 16:00 (0.666667)
-  -- Sábado: entrada 7:00 (0.291667), salida 13:00 (0.541667)
+  -- Lunes-Jueves: 8:00 AM - 5:30 PM
+  -- Viernes: 8:00 AM - 4:00 PM
+  -- Sábado: 9:00 AM - 12:00 PM
   
   IF v_dia_semana IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday') THEN
-    v_validacion_entrada_decimal := 0.291667; -- 7:00
-    v_validacion_salida_decimal := 0.708333;  -- 17:00
-    NEW.validacion_entrada := '07:00:00';
-    NEW.validacion_salida := '17:00:00';
+    v_validacion_entrada_decimal := 8.0 / 24;    -- 8:00 AM = 0.333333
+    v_validacion_salida_decimal := 17.5 / 24;    -- 5:30 PM = 0.729167
+    NEW.validacion_entrada := '08:00:00';
+    NEW.validacion_salida := '17:30:00';
   ELSIF v_dia_semana = 'Friday' THEN
-    v_validacion_entrada_decimal := 0.291667; -- 7:00
-    v_validacion_salida_decimal := 0.666667;  -- 16:00
-    NEW.validacion_entrada := '07:00:00';
+    v_validacion_entrada_decimal := 8.0 / 24;    -- 8:00 AM = 0.333333
+    v_validacion_salida_decimal := 16.0 / 24;    -- 4:00 PM = 0.666667
+    NEW.validacion_entrada := '08:00:00';
     NEW.validacion_salida := '16:00:00';
   ELSIF v_dia_semana = 'Saturday' THEN
-    v_validacion_entrada_decimal := 0.291667; -- 7:00
-    v_validacion_salida_decimal := 0.541667;  -- 13:00
-    NEW.validacion_entrada := '07:00:00';
-    NEW.validacion_salida := '13:00:00';
+    v_validacion_entrada_decimal := 9.0 / 24;    -- 9:00 AM = 0.375
+    v_validacion_salida_decimal := 12.0 / 24;    -- 12:00 PM = 0.5
+    NEW.validacion_entrada := '09:00:00';
+    NEW.validacion_salida := '12:00:00';
   ELSE -- Domingo
-    v_validacion_entrada_decimal := 0.291667;
-    v_validacion_salida_decimal := 0.708333;
-    NEW.validacion_entrada := '07:00:00';
-    NEW.validacion_salida := '17:00:00';
+    v_validacion_entrada_decimal := 8.0 / 24;
+    v_validacion_salida_decimal := 17.5 / 24;
+    NEW.validacion_entrada := '08:00:00';
+    NEW.validacion_salida := '17:30:00';
   END IF;
   
   -- Solo calcular si hay hora de salida
   IF v_hora_salida_decimal IS NOT NULL THEN
-    -- H.E. Diurna (entre 6:00 y 21:00)
+    -- H.E. Diurna
+    -- Lunes-Viernes: 5:30 PM - 9:00 PM y 6:00 AM - 8:00 AM
+    -- Sábado: 6:00 AM - 9:00 AM y 12:00 PM - 9:00 PM
     IF v_es_festivo THEN
       v_he_diurna := 0;
+    ELSIF v_dia_semana = 'Saturday' THEN
+      -- Sábado: 6:00 AM - 9:00 AM (0.25 - 0.375) y 12:00 PM - 9:00 PM (0.5 - 0.875)
+      v_he_diurna := GREATEST(0, LEAST(0.375, v_hora_entrada_decimal) - 0.25) +  -- Antes de 9 AM
+                     GREATEST(0, 0.375 - GREATEST(0.25, v_hora_entrada_decimal)) +  -- Si entró antes de 9 AM
+                     GREATEST(0, LEAST(0.875, v_hora_salida_decimal) - 0.5);  -- Después de 12 PM
     ELSE
-      v_he_diurna := GREATEST(0, LEAST(0.875, v_hora_salida_decimal) - GREATEST(0.25, v_validacion_salida_decimal)) +
-                     GREATEST(0, LEAST(0.875, v_validacion_entrada_decimal) - GREATEST(0.25, v_hora_entrada_decimal));
+      -- Lunes-Viernes: 6:00 AM - 8:00 AM (0.25 - 0.333333) y 5:30 PM - 9:00 PM (0.729167 - 0.875)
+      v_he_diurna := GREATEST(0, 0.333333 - GREATEST(0.25, v_hora_entrada_decimal)) +  -- Antes de 8 AM
+                     GREATEST(0, LEAST(0.875, v_hora_salida_decimal) - v_validacion_salida_decimal);  -- Después de 5:30 PM
     END IF;
     
-    -- Desayuno/Almuerzo (1h o 2h según horario)
+    -- Desayuno/Almuerzo
+    -- 7:00 AM = 7/24 = 0.291667, 2:00 PM = 14/24 = 0.583333
     IF v_es_festivo OR v_dia_semana = 'Sunday' THEN
-      IF v_hora_entrada_decimal < 0.5 AND v_hora_salida_decimal >= 0.583333 THEN
+      -- Festivos/Domingos: entrada antes 7am Y salida después 2pm = 2h, sino entrada antes 7am = 1h
+      IF v_hora_entrada_decimal < 0.291667 AND v_hora_salida_decimal >= 0.583333 THEN
         v_desayuno_almuerzo := 2.0 / 24; -- 2 horas
-      ELSIF v_hora_entrada_decimal < 0.5 THEN
+      ELSIF v_hora_entrada_decimal < 0.291667 THEN
         v_desayuno_almuerzo := 1.0 / 24; -- 1 hora
       ELSE
         v_desayuno_almuerzo := 0;
       END IF;
     ELSIF v_dia_semana = 'Saturday' THEN
-      IF v_hora_entrada_decimal <= 0.270833 AND v_hora_salida_decimal >= 0.583333 THEN
+      -- Sábado: entrada antes 7am Y salida después 2pm = 2h, sino entrada antes 7am = 1h
+      IF v_hora_entrada_decimal < 0.291667 AND v_hora_salida_decimal >= 0.583333 THEN
         v_desayuno_almuerzo := 2.0 / 24;
-      ELSIF v_hora_entrada_decimal <= 0.270833 THEN
+      ELSIF v_hora_entrada_decimal < 0.291667 THEN
         v_desayuno_almuerzo := 1.0 / 24;
       ELSE
         v_desayuno_almuerzo := 0;
       END IF;
     ELSE -- Lunes-Viernes
-      IF v_hora_entrada_decimal <= 0.270833 THEN
+      -- Entrada antes de 7am = 1h
+      IF v_hora_entrada_decimal < 0.291667 THEN
         v_desayuno_almuerzo := 1.0 / 24;
       ELSE
         v_desayuno_almuerzo := 0;
@@ -183,23 +195,36 @@ BEGIN
     NEW.horario_compensado_decimal := v_horario_compensado;
     NEW.total_he_diurna_decimal := v_he_diurna - v_desayuno_almuerzo - v_horario_compensado;
     
-    -- H.E. Nocturna (21:00-6:00) con multiplicador 1.35
+    -- H.E. Nocturna (9:00 PM - 6:00 AM) con multiplicador 1.35
+    -- 9:00 PM = 21/24 = 0.875, 6:00 AM = 0.25
     IF v_es_festivo THEN
       v_he_nocturna := 0;
     ELSE
-      v_he_nocturna := (GREATEST(0, LEAST(v_hora_salida_decimal, 0.25) - GREATEST(v_hora_entrada_decimal, 0)) +
-                        GREATEST(0, LEAST(v_hora_salida_decimal, 1) - GREATEST(v_hora_entrada_decimal, 0.875))) * 1.35;
+      -- Horas de 9 PM (0.875) hasta medianoche + medianoche hasta 6 AM (0.25)
+      v_he_nocturna := (
+        GREATEST(0, LEAST(v_hora_salida_decimal, 1) - GREATEST(v_hora_entrada_decimal, 0.875)) +  -- 9 PM - 12 AM
+        GREATEST(0, LEAST(v_hora_salida_decimal, 0.25) - GREATEST(v_hora_entrada_decimal, 0))     -- 12 AM - 6 AM
+      ) * 1.35;
     END IF;
     NEW.he_nocturna_decimal := v_he_nocturna;
     
     -- Dom/Fest con multiplicador 1.75
-    IF v_es_festivo THEN
-      v_dom_fest := (LEAST(v_hora_salida_decimal, 0.5) - v_hora_entrada_decimal +
-                     GREATEST(0, v_hora_salida_decimal - 0.5)) * 1.75;
+    -- (Horas trabajadas - Alimentación) * 1.75
+    IF v_es_festivo OR v_dia_semana = 'Sunday' THEN
+      DECLARE
+        v_horas_trabajadas DECIMAL;
+      BEGIN
+        v_horas_trabajadas := v_hora_salida_decimal - v_hora_entrada_decimal;
+        -- Si pasa medianoche, ajustar
+        IF v_hora_salida_decimal < v_hora_entrada_decimal THEN
+          v_horas_trabajadas := (1 - v_hora_entrada_decimal) + v_hora_salida_decimal;
+        END IF;
+        v_dom_fest := (v_horas_trabajadas - v_desayuno_almuerzo) * 1.75;
+      END;
     ELSE
       v_dom_fest := 0;
     END IF;
-    NEW.dom_fest_decimal := v_dom_fest;
+    NEW.dom_fest_decimal := GREATEST(0, v_dom_fest);
     
     -- Horas Finales (suma de todo)
     NEW.horas_finales_decimal := NEW.total_he_diurna_decimal + NEW.he_nocturna_decimal + NEW.dom_fest_decimal;
@@ -215,11 +240,20 @@ BEFORE INSERT OR UPDATE ON overtime_tracking
 FOR EACH ROW
 EXECUTE FUNCTION calculate_overtime();
 
+-- Función para updated_at
+CREATE OR REPLACE FUNCTION update_overtime_tracking_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Trigger para updated_at
 CREATE TRIGGER overtime_tracking_updated_at
 BEFORE UPDATE ON overtime_tracking
 FOR EACH ROW
-EXECUTE FUNCTION update_updated_at();
+EXECUTE FUNCTION update_overtime_tracking_updated_at();
 
 -- RLS Policies
 ALTER TABLE overtime_tracking ENABLE ROW LEVEL SECURITY;

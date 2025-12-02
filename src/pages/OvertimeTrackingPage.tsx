@@ -305,13 +305,22 @@ export const OvertimeTrackingPage: React.FC = () => {
             
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-900">
-                <strong>Nota:</strong> Los cálculos se realizan automáticamente según el horario laboral:
+                <strong>Horarios Laborales:</strong> Los cálculos se basan en:
               </p>
               <ul className="text-xs text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                <li>Lunes-Jueves: 7:00 AM - 5:00 PM</li>
-                <li>Viernes: 7:00 AM - 4:00 PM</li>
-                <li>Sábado: 7:00 AM - 1:00 PM</li>
+                <li><strong>Lunes-Jueves:</strong> 8:00 AM - 5:30 PM</li>
+                <li><strong>Viernes:</strong> 8:00 AM - 4:00 PM</li>
+                <li><strong>Sábado:</strong> 9:00 AM - 12:00 PM</li>
               </ul>
+              <p className="text-xs text-blue-700 mt-2">
+                <strong>H.E. Diurna:</strong> 6:00 AM - 8:00 AM y 5:30 PM - 9:00 PM (Lunes-Viernes) | 6:00 AM - 9:00 AM y 12:00 PM - 9:00 PM (Sábado)
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                <strong>H.E. Nocturna (x1.35):</strong> 9:00 PM - 6:00 AM
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                <strong>Alimentación:</strong> 1h si entra antes 7:00 AM | 2h si entra antes 7:00 AM y sale después 2:00 PM (Sábado/Domingo/Festivo)
+              </p>
             </div>
           </CardBody>
         </Card>
