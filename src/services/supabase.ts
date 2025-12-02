@@ -54,7 +54,11 @@ export const EQUIPMENT_LIST_FIELDS = `
   insurance_policy_expiration,
   driver_license_expiration,
   permit_status,
-  status
+  status,
+  technical_inspection_url,
+  soat_url,
+  insurance_policy_url,
+  driver_license_url
 `;
 
 export const EQUIPMENT_FULL_FIELDS = `
@@ -71,5 +75,9 @@ export const EQUIPMENT_FULL_FIELDS = `
   driver_license_expiration,
   permit_status,
   status,
-  notes
+  notes,
+  technical_inspection_url,
+  soat_url,
+  insurance_policy_url,
+  driver_license_url
 `;

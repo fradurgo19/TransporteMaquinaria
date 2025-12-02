@@ -28,6 +28,10 @@ interface Equipment {
   permit_status: string;
   status: string;
   notes?: string;
+  technical_inspection_url?: string;
+  soat_url?: string;
+  insurance_policy_url?: string;
+  driver_license_url?: string;
 }
 
 interface NewEquipmentForm {
@@ -707,13 +711,26 @@ export const EquipmentPage: React.FC = () => {
                               {getExpirationBadge(equip.technical_inspection_expiration)}
                             </>
                           )}
-                          <button
-                            onClick={() => openUploadModal(equip.id, 'tecno')}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="Subir documento"
-                          >
-                            <Upload className="h-3 w-3" />
-                          </button>
+                          <div className="flex gap-1">
+                            {equip.technical_inspection_url && (
+                              <a
+                                href={equip.technical_inspection_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-700"
+                                title="Ver documento"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => openUploadModal(equip.id, 'tecno')}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Subir documento"
+                            >
+                              <Upload className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </td>
 
@@ -735,13 +752,26 @@ export const EquipmentPage: React.FC = () => {
                               {getExpirationBadge(equip.soat_expiration)}
                             </>
                           )}
-                          <button
-                            onClick={() => openUploadModal(equip.id, 'soat')}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="Subir documento"
-                          >
-                            <Upload className="h-3 w-3" />
-                          </button>
+                          <div className="flex gap-1">
+                            {equip.soat_url && (
+                              <a
+                                href={equip.soat_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-700"
+                                title="Ver documento"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => openUploadModal(equip.id, 'soat')}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Subir documento"
+                            >
+                              <Upload className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </td>
 
@@ -763,13 +793,26 @@ export const EquipmentPage: React.FC = () => {
                               {getExpirationBadge(equip.insurance_policy_expiration)}
                             </>
                           )}
-                          <button
-                            onClick={() => openUploadModal(equip.id, 'poliza')}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="Subir documento"
-                          >
-                            <Upload className="h-3 w-3" />
-                          </button>
+                          <div className="flex gap-1">
+                            {equip.insurance_policy_url && (
+                              <a
+                                href={equip.insurance_policy_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-700"
+                                title="Ver documento"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => openUploadModal(equip.id, 'poliza')}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Subir documento"
+                            >
+                              <Upload className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </td>
 
@@ -791,13 +834,26 @@ export const EquipmentPage: React.FC = () => {
                               {getExpirationBadge(equip.driver_license_expiration)}
                             </>
                           )}
-                          <button
-                            onClick={() => openUploadModal(equip.id, 'licencia')}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="Subir documento"
-                          >
-                            <Upload className="h-3 w-3" />
-                          </button>
+                          <div className="flex gap-1">
+                            {equip.driver_license_url && (
+                              <a
+                                href={equip.driver_license_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-700"
+                                title="Ver documento"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => openUploadModal(equip.id, 'licencia')}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Subir documento"
+                            >
+                              <Upload className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </td>
 
