@@ -160,35 +160,26 @@ BEGIN
                      GREATEST(0, LEAST(0.875, v_validacion_entrada_decimal) - GREATEST(0.25, v_hora_entrada_decimal));
     END IF;
     
-    -- Desayuno/Almuerzo
-    -- Fórmula Excel: SI(O([@Tipo]="Festivo",[@Dia]="domingo"),
-    --   (SI([@[Hora De Entrada]]<0.5,1/24,0)+SI([@[Hora De Salida]]>=0.5833333,1/24,0)),
-    --   SI([@Dia]="sábado",
-    --     (SI([@[Hora De Entrada]]<=0.2708333,1/24,0)+SI([@[Hora De Salida]]>=0.5833333,1/24,0)),
-    --     SI(Y([@Dia]<>"domingo",[@Tipo]<>"Festivo",[@[Hora De Entrada]]<=0.2708333),1/24,0)))
+    -- Desayuno/Almuerzo CORREGIDO
+    -- L-V: 1h si entra antes 7am
+    -- S/D/Festivo: SIEMPRE 1h desayuno + 1h almuerzo si sale después 2pm
     
-    -- 0.5 = 12:00, 0.5833333 = 14:00, 0.2708333 = 6:30 AM
+    -- 0.291667 = 7:00 AM, 0.583333 = 14:00 (2 PM)
     IF v_es_festivo OR v_dia_semana = 'Sunday' THEN
-      -- Festivo/Domingo: suma de condiciones
-      v_desayuno_almuerzo := 0;
-      IF v_hora_entrada_decimal < 0.5 THEN
-        v_desayuno_almuerzo := v_desayuno_almuerzo + (1.0 / 24);
-      END IF;
-      IF v_hora_salida_decimal >= 0.5833333 THEN
-        v_desayuno_almuerzo := v_desayuno_almuerzo + (1.0 / 24);
+      -- Festivo/Domingo: SIEMPRE 1h desayuno + almuerzo si sale después 2pm
+      v_desayuno_almuerzo := 1.0 / 24; -- Desayuno siempre
+      IF v_hora_salida_decimal >= 0.583333 THEN
+        v_desayuno_almuerzo := v_desayuno_almuerzo + (1.0 / 24); -- + Almuerzo
       END IF;
     ELSIF v_dia_semana = 'Saturday' THEN
-      -- Sábado: suma de condiciones
-      v_desayuno_almuerzo := 0;
-      IF v_hora_entrada_decimal <= 0.2708333 THEN
-        v_desayuno_almuerzo := v_desayuno_almuerzo + (1.0 / 24);
-      END IF;
-      IF v_hora_salida_decimal >= 0.5833333 THEN
-        v_desayuno_almuerzo := v_desayuno_almuerzo + (1.0 / 24);
+      -- Sábado: SIEMPRE 1h desayuno + almuerzo si sale después 2pm
+      v_desayuno_almuerzo := 1.0 / 24; -- Desayuno siempre
+      IF v_hora_salida_decimal >= 0.583333 THEN
+        v_desayuno_almuerzo := v_desayuno_almuerzo + (1.0 / 24); -- + Almuerzo
       END IF;
     ELSE
-      -- Lunes-Viernes: solo si entra antes de 6:30 AM
-      IF v_hora_entrada_decimal <= 0.2708333 THEN
+      -- Lunes-Viernes: 1h solo si entra antes de 7am
+      IF v_hora_entrada_decimal < 0.291667 THEN
         v_desayuno_almuerzo := 1.0 / 24;
       ELSE
         v_desayuno_almuerzo := 0;
@@ -247,33 +238,24 @@ BEGIN
     END IF;
     NEW.he_nocturna_decimal := v_he_nocturna;
     
-    -- Dom/Fest con multiplicador 1.75
-    -- Fórmula Excel: SI.ERROR(SI([@Tipo]="Festivo",
-    --   ((SI([@[Hora De Salida]]<=0.5,[@[Hora De Salida]],0.5))-[@[Hora De Entrada]]+
-    --    SI([@[Hora De Salida]]>0.5,[@[Hora De Salida]]-0.5,0))*1.75,0),0)
+    -- Dom/Fest CORREGIDO
+    -- (Horas totales trabajadas - Alimentación) * 1.75
+    -- Solo para festivos (ya verificados con tabla festivos_colombia)
     
-    IF v_es_festivo THEN
+    IF v_es_festivo OR v_dia_semana = 'Sunday' THEN
       DECLARE
-        v_parte1 DECIMAL;
-        v_parte2 DECIMAL;
+        v_horas_totales DECIMAL;
       BEGIN
-        -- 0.5 = 12:00 PM
-        -- Primera parte: MIN(hora_salida, 0.5) - hora_entrada
-        IF v_hora_salida_decimal <= 0.5 THEN
-          v_parte1 := v_hora_salida_decimal;
+        -- Calcular horas totales trabajadas
+        IF v_hora_salida_decimal < v_hora_entrada_decimal THEN
+          -- Pasa medianoche
+          v_horas_totales := (1 - v_hora_entrada_decimal) + v_hora_salida_decimal;
         ELSE
-          v_parte1 := 0.5;
-        END IF;
-        v_parte1 := v_parte1 - v_hora_entrada_decimal;
-        
-        -- Segunda parte: SI hora_salida > 0.5, hora_salida - 0.5, sino 0
-        IF v_hora_salida_decimal > 0.5 THEN
-          v_parte2 := v_hora_salida_decimal - 0.5;
-        ELSE
-          v_parte2 := 0;
+          v_horas_totales := v_hora_salida_decimal - v_hora_entrada_decimal;
         END IF;
         
-        v_dom_fest := (v_parte1 + v_parte2) * 1.75;
+        -- (Horas totales - Alimentación) * 1.75
+        v_dom_fest := (v_horas_totales - v_desayuno_almuerzo) * 1.75;
       END;
     ELSE
       v_dom_fest := 0;
