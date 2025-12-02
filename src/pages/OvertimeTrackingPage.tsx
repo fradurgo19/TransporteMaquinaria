@@ -10,7 +10,7 @@ import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useOvertimeTracking, useSyncOvertimeTracking, useUpdateOvertimeTracking, OvertimeTracking } from '../hooks/useOvertimeTracking';
-import { parseGPSExcel, uploadGPSData, analyzeAndUpdateRoute } from '../services/gpsService';
+import { parseGPSExcel, uploadGPSData, analyzeAndUpdateRoute, validateGPSExcel } from '../services/gpsService';
 import { GPSRouteMap } from '../components/GPSRouteMap';
 
 export const OvertimeTrackingPage: React.FC = () => {
@@ -77,6 +77,17 @@ export const OvertimeTrackingPage: React.FC = () => {
       const records = await parseGPSExcel(file);
       console.log(`✅ ${records.length} registros GPS parseados`);
       
+      // VALIDAR que el Excel coincida con el registro
+      const validation = await validateGPSExcel(overtimeId, records);
+      
+      if (!validation.valid) {
+        alert(validation.message);
+        setUploadingGPS(null);
+        return;
+      }
+      
+      console.log('✅ Validación exitosa:', validation.message);
+      
       // Subir a Supabase
       await uploadGPSData(overtimeId, records);
       console.log('✅ Datos GPS subidos');
@@ -86,8 +97,11 @@ export const OvertimeTrackingPage: React.FC = () => {
       console.log('✅ Ruta analizada:', analysis);
       
       alert(`✅ GPS procesado correctamente\n\n` +
+            `Placa: ${records[0].movil}\n` +
             `Inicio: ${analysis.entrada ? new Date(analysis.entrada).toLocaleString('es-CO') : 'N/A'}\n` +
+            `Ubicación: ${analysis.ubicacion_entrada || 'N/A'}\n\n` +
             `Fin: ${analysis.salida ? new Date(analysis.salida).toLocaleString('es-CO') : 'N/A'}\n` +
+            `Ubicación: ${analysis.ubicacion_salida || 'N/A'}\n\n` +
             `Total registros: ${analysis.total_records}`);
       
       // Refrescar datos

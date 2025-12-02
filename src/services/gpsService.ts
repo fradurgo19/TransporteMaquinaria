@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 import * as XLSX from 'xlsx';
 
+declare const google: any;
+
 export interface GPSRecord {
   movil: string;
   alias: string;
@@ -189,6 +191,71 @@ export const detectRouteEnd = (records: GPSRecord[]): GPSRecord | null => {
   
   console.log('❌ No se detectó fin de recorrido');
   return null;
+};
+
+/**
+ * Validar que el Excel coincida con el registro de overtime
+ */
+export const validateGPSExcel = async (
+  overtimeTrackingId: string,
+  records: GPSRecord[]
+): Promise<{ valid: boolean; message: string }> => {
+  console.log('🔍 Validando coincidencia de Excel con registro...');
+  
+  // Obtener registro de overtime
+  const { data: overtimeRecord, error } = await supabase
+    .from('overtime_tracking')
+    .select('placa, fecha')
+    .eq('id', overtimeTrackingId)
+    .single();
+  
+  if (error || !overtimeRecord) {
+    return { valid: false, message: 'No se encontró el registro de overtime' };
+  }
+  
+  const expectedPlaca = overtimeRecord.placa.toUpperCase().trim();
+  const expectedDate = new Date(overtimeRecord.fecha).toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  console.log(`📋 Registro: Placa=${expectedPlaca}, Fecha=${expectedDate}`);
+  
+  if (records.length === 0) {
+    return { valid: false, message: 'El archivo Excel está vacío o no tiene datos válidos' };
+  }
+  
+  // Verificar que la placa coincida (columna "Movil")
+  const firstRecord = records[0];
+  const excelPlaca = firstRecord.movil.toUpperCase().trim();
+  
+  if (excelPlaca !== expectedPlaca) {
+    return { 
+      valid: false, 
+      message: `❌ Placa incorrecta\n\nRegistro: ${expectedPlaca}\nExcel: ${excelPlaca}\n\nEste Excel no corresponde al vehículo seleccionado.` 
+    };
+  }
+  
+  // Verificar que la fecha coincida (columna "Fecha GPS")
+  // Formato del proveedor: "2025/07/01 06:47:57"
+  const firstGPSDate = firstRecord.fecha_gps.split(' ')[0]; // "2025/07/01"
+  const excelDate = firstGPSDate.replace(/\//g, '-'); // "2025-07-01"
+  
+  // Buscar al menos un registro con la fecha correcta
+  const hasMatchingDate = records.some(record => {
+    const recordDate = record.fecha_gps.split(' ')[0].replace(/\//g, '-');
+    return recordDate === expectedDate;
+  });
+  
+  if (!hasMatchingDate) {
+    return { 
+      valid: false, 
+      message: `❌ Fecha incorrecta\n\nRegistro: ${expectedDate}\nExcel: ${excelDate}\n\nEste Excel no corresponde a la fecha seleccionada.` 
+    };
+  }
+  
+  console.log(`✅ Validación exitosa: Placa y fecha coinciden`);
+  return { 
+    valid: true, 
+    message: `✅ Archivo correcto\nPlaca: ${expectedPlaca}\nFecha: ${expectedDate}\nRegistros: ${records.length}` 
+  };
 };
 
 /**
