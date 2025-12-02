@@ -10,6 +10,7 @@ import {
   FileText,
   Package,
   MapPin,
+  Calculator,
   LogOut,
   RefreshCw,
 } from 'lucide-react';
@@ -57,6 +58,12 @@ export const Sidebar: React.FC = () => {
       label: 'Horas de Operación',
       icon: Clock,
       roles: ['admin', 'user'], // Operadores y admins
+    },
+    {
+      path: '/overtime-tracking',
+      label: 'Seguimiento H. Extras',
+      icon: Calculator,
+      roles: ['admin'], // Solo admin de transport
     },
     {
       path: '/fuel',

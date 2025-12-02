@@ -15,6 +15,7 @@ import { TransportRequestsPage } from './pages/TransportRequestsPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
 import { TrackingPage } from './pages/TrackingPage';
 import { LogisticsDashboardPage } from './pages/LogisticsDashboardPage';
+import { OvertimeTrackingPage } from './pages/OvertimeTrackingPage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { Spinner } from './atoms/Spinner';
 
@@ -178,6 +179,16 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <LogisticsDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/overtime-tracking"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <OvertimeTrackingPage />
+            </AdminRoute>
           </ProtectedRoute>
         }
       />
