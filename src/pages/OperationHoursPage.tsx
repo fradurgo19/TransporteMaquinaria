@@ -14,6 +14,8 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { format, parseISO } from 'date-fns';
 import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
 import { supabase } from '../services/supabase';
+import { useEquipment as useEquipmentHook } from '../hooks/useEquipment';
+import { Select } from '../atoms/Select';
 
 interface OperationHour {
   id: string;
@@ -58,6 +60,16 @@ export const OperationHoursPage: React.FC = () => {
   const { startWork, finishWork } = useOperationHoursMutation();
 
   const operationHours = operationHoursData?.data || [];
+
+  // Obtener lista de vehículos y conductores para el formulario manual
+  const { data: equipmentListData } = useEquipmentHook({ 
+    limit: 100, 
+    status: 'active',
+    useFullFields: false 
+  });
+  
+  const vehiclesList = equipmentListData?.data || [];
+  const uniqueDrivers = [...new Set(vehiclesList.map(v => v.driver_name))].filter(Boolean);
 
   const handleStartWork = async () => {
     if (!selectedEquipment?.license_plate || !user) {
@@ -261,18 +273,39 @@ export const OperationHoursPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
+                    <Select
                       label="Placa del Vehículo *"
                       value={manualFormData.vehicle_plate}
-                      onChange={(e) => setManualFormData({ ...manualFormData, vehicle_plate: e.target.value.toUpperCase() })}
-                      placeholder="ABC123"
+                      onChange={(e) => {
+                        const selectedVehicle = vehiclesList.find(v => v.license_plate === e.target.value);
+                        setManualFormData({ 
+                          ...manualFormData, 
+                          vehicle_plate: e.target.value,
+                          driver_name: selectedVehicle?.driver_name || manualFormData.driver_name
+                        });
+                      }}
+                      options={[
+                        { value: '', label: 'Seleccionar vehículo...' },
+                        ...vehiclesList
+                          .filter(v => v.vehicle_type !== 'trailer')
+                          .map(v => ({
+                            value: v.license_plate,
+                            label: `${v.license_plate} - ${v.driver_name}`
+                          }))
+                      ]}
                       required
                     />
-                    <Input
+                    <Select
                       label="Nombre del Conductor *"
                       value={manualFormData.driver_name}
                       onChange={(e) => setManualFormData({ ...manualFormData, driver_name: e.target.value })}
-                      placeholder="Nombre completo"
+                      options={[
+                        { value: '', label: 'Seleccionar conductor...' },
+                        ...uniqueDrivers.map(driver => ({
+                          value: driver,
+                          label: driver
+                        }))
+                      ]}
                       required
                     />
                   </div>
