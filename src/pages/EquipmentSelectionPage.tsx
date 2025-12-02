@@ -21,8 +21,9 @@ interface Equipment {
 export const EquipmentSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { selectEquipment } = useEquipment();
+  const { selectEquipment, autoSelectAssignedEquipment } = useEquipment();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isAutoSelecting, setIsAutoSelecting] = useState(true);
 
   // Usar hook optimizado que incluye autenticación automáticamente
   const { 
@@ -38,6 +39,26 @@ export const EquipmentSelectionPage: React.FC = () => {
   });
 
   const equipment = equipmentData?.data || [];
+
+  // Auto-seleccionar vehículo asignado al usuario
+  React.useEffect(() => {
+    const tryAutoSelect = async () => {
+      if (user?.id && isAutoSelecting) {
+        const assigned = await autoSelectAssignedEquipment(user.id);
+        if (assigned) {
+          console.log('✅ Vehículo asignado automáticamente, redirigiendo...');
+          navigate('/');
+        } else {
+          console.log('ℹ️ Usuario sin vehículo asignado, mostrando selector');
+        }
+        setIsAutoSelecting(false);
+      }
+    };
+
+    if (!isLoading && equipment.length > 0) {
+      tryAutoSelect();
+    }
+  }, [user, isLoading, equipment.length]);
 
   const handleLogout = async () => {
     await logout();
@@ -71,12 +92,14 @@ export const EquipmentSelectionPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isAutoSelecting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center">
         <div className="text-center">
           <Loader className="h-12 w-12 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Cargando equipos...</p>
+          <p className="text-gray-600">
+            {isAutoSelecting ? 'Verificando vehículo asignado...' : 'Cargando equipos...'}
+          </p>
         </div>
       </div>
     );
