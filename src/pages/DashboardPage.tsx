@@ -3,39 +3,27 @@ import { MainLayout } from '../templates/MainLayout';
 import { MetricCard } from '../molecules/MetricCard';
 import { Card, CardHeader, CardBody } from '../atoms/Card';
 import { Badge } from '../atoms/Badge';
-import { Truck, Fuel, Clock, AlertCircle } from 'lucide-react';
+import { Truck, Fuel, Clock, AlertCircle, Loader } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
+import { useDashboardMetrics, useDashboardAlerts } from '../hooks/useDashboard';
+import { useEquipment } from '../hooks/useEquipment';
+import { format } from 'date-fns';
 
 export const DashboardPage: React.FC = () => {
   useProtectedRoute(['admin']); // Solo administradores
 
-  const mockMetrics = {
-    totalKilometers: 12543,
-    fuelConsumption: 3421,
-    activeVehicles: 18,
-    expiringDocuments: 5,
-  };
+  // Usar hooks optimizados para cargar datos
+  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
+  const { data: alerts = [], isLoading: alertsLoading } = useDashboardAlerts();
+  const { data: equipmentData } = useEquipment({ limit: 5 }); // Solo primeros 5 para el preview
 
-  const mockAlerts = [
-    {
-      id: '1',
-      type: 'warning' as const,
-      message: 'Vehicle ABC-123 technical inspection expires in 7 days',
-      timestamp: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      type: 'error' as const,
-      message: 'Vehicle XYZ-789 SOAT expired',
-      timestamp: new Date().toISOString(),
-    },
-    {
-      id: '3',
-      type: 'info' as const,
-      message: 'Driver license renewal required for John Doe',
-      timestamp: new Date().toISOString(),
-    },
-  ];
+  // Usar datos reales o valores por defecto mientras cargan
+  const dashboardMetrics = metrics || {
+    totalKilometers: 0,
+    fuelConsumption: 0,
+    activeVehicles: 0,
+    expiringDocuments: 0,
+  };
 
   return (
     <MainLayout>
@@ -50,26 +38,26 @@ export const DashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
             title="Total Kilometers"
-            value={mockMetrics.totalKilometers.toLocaleString()}
+            value={metricsLoading ? '...' : dashboardMetrics.totalKilometers.toLocaleString()}
             icon={Truck}
             iconColor="text-blue-600"
-            trend={{ value: 12, isPositive: true }}
+            trend={!metricsLoading ? { value: 12, isPositive: true } : undefined}
           />
           <MetricCard
             title="Fuel Consumption (L)"
-            value={mockMetrics.fuelConsumption.toLocaleString()}
+            value={metricsLoading ? '...' : dashboardMetrics.fuelConsumption.toLocaleString()}
             icon={Fuel}
             iconColor="text-orange-600"
           />
           <MetricCard
             title="Active Vehicles"
-            value={mockMetrics.activeVehicles}
+            value={metricsLoading ? '...' : dashboardMetrics.activeVehicles.toString()}
             icon={Clock}
             iconColor="text-green-600"
           />
           <MetricCard
             title="Expiring Documents"
-            value={mockMetrics.expiringDocuments}
+            value={metricsLoading ? '...' : dashboardMetrics.expiringDocuments.toString()}
             icon={AlertCircle}
             iconColor="text-red-600"
           />
@@ -83,42 +71,52 @@ export const DashboardPage: React.FC = () => {
               </h2>
             </CardHeader>
             <CardBody>
-              <div className="space-y-4">
-                {mockAlerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50"
-                  >
-                    <AlertCircle
-                      className={`h-5 w-5 mt-0.5 ${
-                        alert.type === 'error'
-                          ? 'text-red-500'
-                          : alert.type === 'warning'
-                          ? 'text-yellow-500'
-                          : 'text-blue-500'
-                      }`}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-900">{alert.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(alert.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        alert.type === 'error'
-                          ? 'error'
-                          : alert.type === 'warning'
-                          ? 'warning'
-                          : 'info'
-                      }
-                      size="sm"
+              {alertsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="h-6 w-6 text-gray-400 animate-spin" />
+                </div>
+              ) : alerts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No hay alertas pendientes</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {alerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50"
                     >
-                      {alert.type}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                      <AlertCircle
+                        className={`h-5 w-5 mt-0.5 ${
+                          alert.type === 'error'
+                            ? 'text-red-500'
+                            : alert.type === 'warning'
+                            ? 'text-yellow-500'
+                            : 'text-blue-500'
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-900">{alert.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {format(new Date(alert.timestamp), 'dd/MM/yyyy HH:mm')}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          alert.type === 'error'
+                            ? 'error'
+                            : alert.type === 'warning'
+                            ? 'warning'
+                            : 'info'
+                        }
+                        size="sm"
+                      >
+                        {alert.type}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardBody>
           </Card>
 
@@ -129,28 +127,30 @@ export const DashboardPage: React.FC = () => {
               </h2>
             </CardHeader>
             <CardBody>
-              <div className="space-y-4">
-                {[
-                  { plate: 'ABC-123', status: 'Active', location: 'Site A' },
-                  { plate: 'XYZ-789', status: 'Maintenance', location: 'Workshop' },
-                  { plate: 'DEF-456', status: 'Active', location: 'Site B' },
-                ].map((vehicle) => (
-                  <div
-                    key={vehicle.plate}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">{vehicle.plate}</p>
-                      <p className="text-sm text-gray-500">{vehicle.location}</p>
-                    </div>
-                    <Badge
-                      variant={vehicle.status === 'Active' ? 'success' : 'warning'}
+              {!equipmentData?.data || equipmentData.data.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No hay vehículos registrados</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {equipmentData.data.slice(0, 5).map((vehicle) => (
+                    <div
+                      key={vehicle.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
                     >
-                      {vehicle.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{vehicle.license_plate}</p>
+                        <p className="text-sm text-gray-500">{vehicle.site_location}</p>
+                      </div>
+                      <Badge
+                        variant={vehicle.status === 'active' ? 'success' : 'warning'}
+                      >
+                        {vehicle.status === 'active' ? 'Activo' : vehicle.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardBody>
           </Card>
         </div>

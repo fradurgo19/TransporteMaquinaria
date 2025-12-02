@@ -5,8 +5,15 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000,
+      staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados frescos
+      gcTime: 10 * 60 * 1000, // 10 minutos - tiempo de garbage collection (antes cacheTime)
+      structuralSharing: true, // Optimización para compartir estructura de datos
+    },
+    mutations: {
+      retry: 0, // No reintentar mutaciones por defecto
     },
   },
 });
@@ -22,3 +29,5 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     </QueryClientProvider>
   );
 };
+
+export { queryClient };

@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, CheckCircle, Loader } from 'lucide-react';
+import { Truck, CheckCircle, Loader, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEquipment } from '../context/EquipmentContext';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
+import { useEquipment as useEquipmentHook } from '../hooks/useEquipment';
 
 interface Equipment {
   id: string;
@@ -19,42 +20,28 @@ interface Equipment {
 
 export const EquipmentSelectionPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { selectEquipment } = useEquipment();
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchEquipment();
-  }, []);
+  // Usar hook optimizado que incluye autenticación automáticamente
+  const { 
+    data: equipmentData, 
+    isLoading, 
+    error: equipmentError,
+    refetch 
+  } = useEquipmentHook({
+    page: 1,
+    limit: 100, // Mostrar todos los equipos activos
+    status: 'active', // Solo equipos activos
+    useFullFields: false,
+  });
 
-  const fetchEquipment = async () => {
-    try {
-      setIsLoading(true);
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/equipment?status=eq.active&select=id,license_plate,driver_name,brand,vehicle_type,serial_number,status`,
-        {
-          headers: {
-            'apikey': anonKey,
-            'Authorization': `Bearer ${anonKey}`,
-          },
-        }
-      );
+  const equipment = equipmentData?.data || [];
 
-      if (!response.ok) throw new Error('Error cargando equipos');
-
-      const data = await response.json();
-      setEquipment(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   const handleSelect = (equip: Equipment) => {
@@ -68,7 +55,15 @@ export const EquipmentSelectionPage: React.FC = () => {
     console.log('✅ Equipo encontrado:', selected);
     if (selected) {
       console.log('✅ Guardando equipo en contexto:', selected);
-      selectEquipment(selected);
+      // Mapear solo los campos necesarios para el contexto
+      selectEquipment({
+        id: selected.id,
+        license_plate: selected.license_plate,
+        driver_name: selected.driver_name,
+        brand: selected.brand,
+        vehicle_type: (selected.vehicle_type || 'tractor') as 'tractor' | 'trailer',
+        serial_number: selected.serial_number,
+      });
       console.log('✅ Navegando al dashboard...');
       navigate('/');
     } else {
@@ -87,15 +82,46 @@ export const EquipmentSelectionPage: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (equipmentError) {
+    const errorMessage = equipmentError instanceof Error 
+      ? equipmentError.message 
+      : 'Error desconocido';
+    
+    const isPermissionError = errorMessage.includes('permission') || 
+                             errorMessage.includes('policy') || 
+                             errorMessage.includes('RLS') ||
+                             errorMessage.includes('PGRST301');
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-6 text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={fetchEquipment} variant="primary">
-            Reintentar
-          </Button>
+          <h2 className="text-xl font-bold text-red-600 mb-2">Error al cargar equipos</h2>
+          {isPermissionError ? (
+            <>
+              <p className="text-gray-600 mb-2">
+                No tienes permisos para ver los equipos. Esto puede deberse a:
+              </p>
+              <ul className="text-left text-sm text-gray-600 mb-4 space-y-1 list-disc list-inside">
+                <li>Las políticas RLS (Row Level Security) en Supabase no están configuradas correctamente</li>
+                <li>Tu usuario no tiene el rol adecuado</li>
+              </ul>
+              <p className="text-xs text-gray-500 mb-4">
+                Contacta al administrador del sistema para verificar los permisos.
+              </p>
+            </>
+          ) : (
+            <p className="text-gray-600 mb-4">
+              {errorMessage}
+            </p>
+          )}
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => refetch()} variant="primary">
+              Reintentar
+            </Button>
+            <Button onClick={handleLogout} variant="secondary">
+              Cerrar Sesión
+            </Button>
+          </div>
         </Card>
       </div>
     );
@@ -104,6 +130,19 @@ export const EquipmentSelectionPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
+        {/* Botón de cerrar sesión en la esquina superior */}
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={handleLogout}
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
+
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
             <Truck className="h-8 w-8 text-white" />
@@ -122,9 +161,17 @@ export const EquipmentSelectionPage: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               No hay equipos disponibles
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               No se encontraron vehículos activos en el sistema.
             </p>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => refetch()} variant="primary">
+                Actualizar
+              </Button>
+              <Button onClick={handleLogout} variant="secondary">
+                Cerrar Sesión
+              </Button>
+            </div>
           </Card>
         ) : (
           <>

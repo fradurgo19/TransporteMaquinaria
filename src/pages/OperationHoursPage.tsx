@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '../templates/MainLayout';
 import { Card, CardHeader, CardBody } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
-import { Input } from '../atoms/Input';
-import { Select } from '../atoms/Select';
-import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Plus, Clock, Edit, CheckCircle, MapPin } from 'lucide-react';
+import { Clock, CheckCircle } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { format, parseISO } from 'date-fns';
+import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
 
 interface OperationHour {
   id: string;
@@ -33,95 +31,43 @@ export const OperationHoursPage: React.FC = () => {
   useProtectedRoute(['admin', 'user']);
   const { user } = useAuth();
   const { selectedEquipment } = useEquipment();
-  const { latitude, longitude, error: geoError, isLoading: geoLoading, refresh: refreshLocation } = useGeolocation();
-  const [operationHours, setOperationHours] = useState<OperationHour[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeRecord, setActiveRecord] = useState<OperationHour | null>(null);
+  const { latitude, longitude } = useGeolocation();
 
-  useEffect(() => {
-    fetchOperationHours();
-  }, [selectedEquipment]);
+  // Usar hooks optimizados de React Query
+  const { data: operationHoursData, isLoading } = useOperationHours({
+    vehiclePlate: selectedEquipment?.license_plate,
+  });
 
-  useEffect(() => {
-    // Buscar registro activo (in_progress) del vehículo actual
-    const active = operationHours.find(h => h.status === 'in_progress');
-    setActiveRecord(active || null);
-  }, [operationHours]);
+  const { data: activeRecord } = useActiveOperationHour(selectedEquipment?.license_plate);
+  
+  const { startWork, finishWork } = useOperationHoursMutation();
 
-  const fetchOperationHours = async () => {
-    try {
-      setIsLoading(true);
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/operation_hours?vehicle_plate=eq.${selectedEquipment?.license_plate}&order=check_in_time.desc&limit=20`,
-        {
-          headers: {
-            'apikey': anonKey,
-            'Authorization': `Bearer ${anonKey}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setOperationHours(data);
-      }
-    } catch (error) {
-      console.error('Error cargando horas:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const operationHours = operationHoursData?.data || [];
 
   const handleStartWork = async () => {
+    if (!selectedEquipment?.license_plate || !user) {
+      alert('Selecciona un equipo para iniciar la jornada');
+      return;
+    }
+
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
       const now = new Date().toISOString();
       
-      const payload = {
-        vehicle_plate: selectedEquipment?.license_plate,
-        driver_name: user?.full_name || user?.username,
+      await startWork.mutateAsync({
+        vehicle_plate: selectedEquipment.license_plate,
+        driver_name: user.full_name || user.username || '',
         check_in_time: now,
-        check_out_time: null,
         task_description: 'Operación registrada automáticamente',
         location_latitude: latitude || 4.6097,
         location_longitude: longitude || -74.0817,
         activity_type: 'regular',
-        status: 'in_progress',
-        created_by: user?.id,
-      };
+        created_by: user.id,
+      });
 
-      console.log('🟢 Iniciando jornada:', payload);
-
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/operation_hours`,
-        {
-          method: 'POST',
-          headers: {
-            'apikey': anonKey,
-            'Authorization': `Bearer ${anonKey}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation',
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (response.ok) {
-        console.log('✅ Jornada iniciada');
-        await fetchOperationHours();
-      } else {
-        const errorData = await response.json();
-        console.error('❌ Error:', errorData);
-        alert('Error al iniciar jornada');
-      }
-    } catch (error) {
+      console.log('✅ Jornada iniciada');
+    } catch (error: any) {
       console.error('❌ Error:', error);
-      alert('Error al iniciar jornada');
+      alert(`Error al iniciar jornada: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -129,38 +75,17 @@ export const OperationHoursPage: React.FC = () => {
     if (!activeRecord) return;
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
       const now = new Date().toISOString();
       
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/operation_hours?id=eq.${activeRecord.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': anonKey,
-            'Authorization': `Bearer ${anonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            check_out_time: now,
-            status: 'completed',
-          }),
-        }
-      );
+      await finishWork.mutateAsync({
+        id: activeRecord.id,
+        checkOutTime: now,
+      });
 
-      if (response.ok) {
-        console.log('✅ Jornada finalizada');
-        await fetchOperationHours();
-      } else {
-        const errorData = await response.json();
-        console.error('❌ Error:', errorData);
-        alert('Error al finalizar jornada');
-      }
-    } catch (error) {
+      console.log('✅ Jornada finalizada');
+    } catch (error: any) {
       console.error('❌ Error:', error);
-      alert('Error al finalizar jornada');
+      alert(`Error al finalizar jornada: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -244,10 +169,10 @@ export const OperationHoursPage: React.FC = () => {
                     size="lg"
                     className="bg-green-600 hover:bg-green-700 px-8 py-4"
                     onClick={handleStartWork}
-                    disabled={!selectedEquipment}
+                    disabled={!selectedEquipment || startWork.isPending}
                   >
                     <Clock className="h-5 w-5 mr-2" />
-                    Iniciar Jornada
+                    {startWork.isPending ? 'Iniciando...' : 'Iniciar Jornada'}
                   </Button>
                 ) : (
                   <div className="flex flex-col items-center gap-3">
@@ -262,9 +187,10 @@ export const OperationHoursPage: React.FC = () => {
                       variant="warning"
                       className="px-8 py-4"
                       onClick={handleFinishWork}
+                      disabled={finishWork.isPending}
                     >
                       <CheckCircle className="h-5 w-5 mr-2" />
-                      Finalizar Jornada
+                      {finishWork.isPending ? 'Finalizando...' : 'Finalizar Jornada'}
                     </Button>
                   </div>
                 )}

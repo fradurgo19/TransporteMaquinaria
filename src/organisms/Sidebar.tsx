@@ -8,7 +8,6 @@ import {
   Activity,
   ClipboardCheck,
   FileText,
-  Receipt,
   LogOut,
   RefreshCw,
 } from 'lucide-react';
@@ -67,12 +66,6 @@ export const Sidebar: React.FC = () => {
       path: '/checklist',
       label: 'Checklist Pre-Op',
       icon: ClipboardCheck,
-      roles: ['admin', 'user'], // Operadores y admins
-    },
-    {
-      path: '/expense-claims',
-      label: 'Viáticos',
-      icon: Receipt,
       roles: ['admin', 'user'], // Operadores y admins
     },
     {
