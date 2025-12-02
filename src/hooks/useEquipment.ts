@@ -73,8 +73,10 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
         totalPages: Math.ceil((count || 0) / limit),
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
+    staleTime: 30 * 1000, // 30 segundos
+    gcTime: 2 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Polling cada 30 segundos
+    refetchIntervalInBackground: false,
   });
 };
 
