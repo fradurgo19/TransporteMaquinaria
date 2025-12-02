@@ -11,6 +11,7 @@ import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { supabase } from '../services/supabase';
 import { useEquipment, useEquipmentMutation } from '../hooks/useEquipment';
+import { uploadFile, compressImage } from '../services/uploadService';
 
 interface Equipment {
   id: string;
@@ -58,6 +59,7 @@ export const EquipmentPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadData, setUploadData] = useState<DocumentUpload>({
     equipmentId: '',
     documentType: 'tecno',
@@ -128,9 +130,67 @@ export const EquipmentPage: React.FC = () => {
       return;
     }
 
-    console.log('📤 Subiendo documento:', uploadData);
-    alert('Funcionalidad de subida próximamente');
-    setShowUploadModal(false);
+    setIsUploading(true);
+    
+    try {
+      console.log('📤 Subiendo documento:', uploadData);
+      
+      const equip = equipment.find(e => e.id === uploadData.equipmentId);
+      if (!equip) {
+        alert('Equipo no encontrado');
+        return;
+      }
+
+      // Comprimir si es imagen
+      let fileToUpload = uploadData.file;
+      if (uploadData.file.type.startsWith('image/')) {
+        fileToUpload = await compressImage(uploadData.file);
+      }
+
+      // Subir a Storage
+      const upload = await uploadFile(
+        fileToUpload,
+        'equipment-documents' as any, // Nuevo bucket
+        `${equip.license_plate}/${uploadData.documentType}`
+      );
+
+      if (!upload) {
+        alert('Error al subir el archivo');
+        return;
+      }
+
+      // Actualizar equipment con URL del documento
+      const columnMap: Record<string, string> = {
+        tecno: 'technical_inspection_url',
+        soat: 'soat_url',
+        poliza: 'insurance_policy_url',
+        licencia: 'driver_license_url',
+      };
+
+      const column = columnMap[uploadData.documentType];
+      
+      const { error } = await supabase
+        .from('equipment')
+        .update({ [column]: upload.url })
+        .eq('id', uploadData.equipmentId);
+
+      if (error) {
+        console.error('Error actualizando equipment:', error);
+        alert(`Error: ${error.message}`);
+        return;
+      }
+
+      console.log('✅ Documento subido y guardado');
+      alert('✅ Documento subido exitosamente');
+      setShowUploadModal(false);
+      setUploadData({ equipmentId: '', documentType: 'tecno', file: null });
+      setPreviewUrl('');
+    } catch (error: any) {
+      console.error('Error:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const startEdit = (equip: Equipment) => {
@@ -492,9 +552,18 @@ export const EquipmentPage: React.FC = () => {
                   <Button variant="secondary" onClick={() => setShowUploadModal(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleUpload} disabled={!uploadData.file}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Subir
+                  <Button onClick={handleUpload} disabled={!uploadData.file || isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Upload className="h-4 w-4 mr-2 animate-spin" />
+                        Subiendo...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Subir
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
