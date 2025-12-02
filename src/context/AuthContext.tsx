@@ -48,15 +48,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('🔍 Fetching user profile for ID:', userId);
 
-      // Timeout más corto (5 segundos) y con retry
+      // Timeout más corto (2 segundos)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 5 segundos')), 5000);
+        setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 2 segundos')), 2000);
       });
 
       // Usar el cliente de Supabase que incluye automáticamente el token de autenticación
       const queryPromise = supabase
         .from('users')
-        .select('*')
+        .select('id, username, email, role, full_name, phone, created_at')
         .eq('id', userId)
         .single();
 
@@ -137,18 +137,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       fetchingProfileRef.current = false;
       
       if (error.message?.includes('Timeout')) {
-        console.error('⏱️ La consulta se quedó colgada. Intentando fallback...');
-        // Intentar obtener datos básicos de auth como fallback
+        console.warn('⏱️ Query timeout, usando fallback directo (mantener usuario actual)');
+        fetchingProfileRef.current = false;
+        
+        // Si ya tenemos usuario en cache, mantenerlo
+        if (user && user.id === userId) {
+          console.log('✅ Manteniendo usuario en cache');
+          return;
+        }
+        
+        // Si no, obtener desde auth
         try {
           const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
           
           if (authError) {
             console.error('❌ Error getting auth user:', authError);
-            // Si no hay usuario en cache y fallback falla, cerrar sesión
-            if (!user && isMountedRef.current) {
-              console.warn('⚠️ No user data available, clearing session');
-              setUser(null);
-            }
             return;
           }
           
