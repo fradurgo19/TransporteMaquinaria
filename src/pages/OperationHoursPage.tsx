@@ -214,8 +214,6 @@ export const OperationHoursPage: React.FC = () => {
     },
   ];
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
-
   return (
     <MainLayout>
       <div className="space-y-6">
