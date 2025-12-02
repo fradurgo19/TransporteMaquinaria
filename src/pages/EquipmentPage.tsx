@@ -484,7 +484,7 @@ export const EquipmentPage: React.FC = () => {
 
                 {/* Botones de Acción */}
                 <div className="flex justify-end space-x-3 pt-4 border-t">
-                  <Button variant="secondary" onClick={handleCloseAddModal} disabled={isCreating}>
+                  <Button variant="secondary" onClick={handleCloseAddModal} disabled={createEquipment.isPending}>
                     Cancelar
                   </Button>
                   <Button onClick={handleCreateEquipment} disabled={createEquipment.isPending}>
