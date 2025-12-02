@@ -15,7 +15,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { DeliveryStatus } from '../types';
 
 export const TrackingPage: React.FC = () => {
-  useProtectedRoute(['logistics']);
+  useProtectedRoute(['logistics', 'admin_logistics']);
   const { deliveryId } = useParams<{ deliveryId: string }>();
   const navigate = useNavigate();
   const { latitude, longitude } = useGeolocation();

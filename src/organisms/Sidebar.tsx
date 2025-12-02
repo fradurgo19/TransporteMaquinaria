@@ -44,7 +44,7 @@ export const Sidebar: React.FC = () => {
       path: '/equipment',
       label: 'Gestión de Equipos',
       icon: Truck,
-      roles: ['admin'], // Solo administradores
+      roles: ['admin', 'admin_logistics'], // Administradores de ambos departamentos
     },
     {
       path: '/operation-hours',
@@ -80,7 +80,7 @@ export const Sidebar: React.FC = () => {
       path: '/deliveries',
       label: 'Gestión de Entregas',
       icon: Package,
-      roles: ['logistics'], // Solo logística
+      roles: ['logistics', 'admin_logistics'], // Logística y su admin
     },
   ];
 

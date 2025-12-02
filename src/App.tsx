@@ -34,7 +34,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   // Admins, invitados y logística NO necesitan seleccionar equipo
-  if (user?.role !== 'admin' && user?.role !== 'guest' && user?.role !== 'logistics' && !isEquipmentSelected) {
+  const noEquipmentNeeded = ['admin', 'admin_logistics', 'guest', 'logistics'].includes(user?.role || '');
+  if (!noEquipmentNeeded && !isEquipmentSelected) {
     return <Navigate to="/equipment-selection" replace />;
   }
 
@@ -64,8 +65,8 @@ const DashboardRedirect: React.FC = () => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  // Usuarios de logística van a gestión de entregas
-  if (user?.role === 'logistics') {
+  // Admin de logística y usuarios de logística van a gestión de entregas
+  if (user?.role === 'admin_logistics' || user?.role === 'logistics') {
     return <Navigate to="/deliveries" replace />;
   }
   

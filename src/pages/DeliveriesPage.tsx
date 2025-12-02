@@ -14,7 +14,7 @@ import { DeliveryStatus } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export const DeliveriesPage: React.FC = () => {
-  useProtectedRoute(['logistics']);
+  useProtectedRoute(['logistics', 'admin_logistics']);
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

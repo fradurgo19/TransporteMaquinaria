@@ -1,6 +1,6 @@
 // src/types/index.ts - Actualizado con nuevos tipos
 
-export type UserRole = 'admin' | 'user' | 'guest' | 'commercial' | 'logistics';
+export type UserRole = 'admin' | 'user' | 'guest' | 'commercial' | 'logistics' | 'admin_logistics';
 
 export interface User {
   id: string;

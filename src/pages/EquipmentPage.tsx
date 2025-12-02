@@ -52,7 +52,7 @@ interface DocumentUpload {
 }
 
 export const EquipmentPage: React.FC = () => {
-  const { user } = useProtectedRoute(['admin']); // Solo administradores
+  const { user } = useProtectedRoute(['admin', 'admin_logistics']); // Administradores de ambos departamentos
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
