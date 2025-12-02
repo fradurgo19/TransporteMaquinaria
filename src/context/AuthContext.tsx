@@ -48,83 +48,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('🔍 Fetching user profile for ID:', userId);
 
-      // Timeout más corto (2 segundos)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: La consulta tardó más de 2 segundos')), 2000);
-      });
+      // SOLUCIÓN: Usar SOLO auth.users directamente (sin tabla users que da timeout)
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-      // Usar el cliente de Supabase que incluye automáticamente el token de autenticación
-      const queryPromise = supabase
-        .from('users')
-        .select('id, username, email, role, full_name, phone, created_at')
-        .eq('id', userId)
-        .single();
+      if (authError || !authUser) {
+        console.error('❌ Error getting auth user:', authError);
+        fetchingProfileRef.current = false;
+        if (!user) setUser(null);
+        return;
+      }
 
-      const result = await Promise.race([queryPromise, timeoutPromise]) as { data: any; error: any };
+      // Intentar obtener role de la tabla users con timeout muy corto (500ms)
+      let userRole: string | null = null;
+      try {
+        const { data: userData } = await Promise.race([
+          supabase.from('users').select('role').eq('id', userId).single(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 500))
+        ]) as any;
+        
+        if (userData?.role) {
+          userRole = userData.role;
+        }
+      } catch {
+        // Si falla o timeout, usar role de metadata o 'user' por defecto
+        userRole = authUser.user_metadata?.role || 'user';
+      }
+
+      const result = { data: authUser, error: null };
 
       if (!isMountedRef.current) {
         fetchingProfileRef.current = false;
         return;
       }
 
-      const { data, error } = result;
+      const { data } = result;
 
-      if (error) {
-        console.error('❌ Error fetching user profile:', error);
-        console.error('Error details:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        
-        // Si es un error de permisos, intentar obtener el usuario desde auth.users
-        if (error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy')) {
-          console.warn('⚠️ Error de permisos RLS, intentando obtener datos básicos del usuario...');
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          if (authUser && isMountedRef.current) {
-            console.log('✅ Usando datos de auth.users como fallback');
-            setUser({
-              id: authUser.id,
-              username: authUser.email?.split('@')[0] || 'user',
-              email: authUser.email || '',
-              role: 'user' as UserRole, // Rol por defecto
-              full_name: authUser.user_metadata?.full_name || '',
-              phone: authUser.user_metadata?.phone || '',
-              createdAt: authUser.created_at || new Date().toISOString(),
-            });
-            fetchingProfileRef.current = false;
-            return;
-          }
-        }
-        
-        // NO cerrar sesión si hay error, mantener el usuario actual si existe
-        if (!user) {
-          console.warn('⚠️ No user data and no cached user, clearing session');
-          setUser(null);
-        } else {
-          console.warn('⚠️ Error fetching profile, but keeping current user session');
-        }
-        fetchingProfileRef.current = false;
-        return;
-      }
-
-      if (data) {
-        console.log('✅ User profile fetched:', data);
+      if (data && isMountedRef.current) {
+        console.log('✅ User profile fetched from auth.users');
         const userData: User = {
           id: data.id,
-          username: data.username,
-          email: data.email,
-          role: data.role as UserRole,
-          full_name: data.full_name,
-          phone: data.phone,
-          createdAt: data.created_at,
+          username: data.email?.split('@')[0] || 'user',
+          email: data.email || '',
+          role: (userRole || data.user_metadata?.role || 'user') as UserRole,
+          full_name: data.user_metadata?.full_name || '',
+          phone: data.user_metadata?.phone || '',
+          createdAt: data.created_at || new Date().toISOString(),
         };
         setUser(userData);
         userSetRef.current = true;
       } else {
         console.warn('⚠️ No user data returned');
-        // NO cerrar sesión, mantener usuario actual si existe
         if (!user) {
           setUser(null);
           userSetRef.current = false;
