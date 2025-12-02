@@ -293,7 +293,6 @@ export const OperationsPage: React.FC = () => {
                     ref={photoInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     multiple
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []);
@@ -311,14 +310,36 @@ export const OperationsPage: React.FC = () => {
                     className="hidden"
                   />
                   
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => photoInputRef.current?.click()}
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Agregar Fotos ({photos.length})
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        if (photoInputRef.current) {
+                          photoInputRef.current.setAttribute('capture', 'environment');
+                          photoInputRef.current.click();
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Tomar Foto
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        if (photoInputRef.current) {
+                          photoInputRef.current.removeAttribute('capture');
+                          photoInputRef.current.click();
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Subir ({photos.length})
+                    </Button>
+                  </div>
 
                   {photosPreviews.length > 0 && (
                     <div className="grid grid-cols-3 gap-2">

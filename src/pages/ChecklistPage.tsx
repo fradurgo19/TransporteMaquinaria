@@ -6,12 +6,14 @@ import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Plus, ClipboardCheck, CheckCircle, XCircle, MapPin } from 'lucide-react';
+import { Plus, ClipboardCheck, CheckCircle, XCircle, MapPin, Camera, Upload, Loader } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { format } from 'date-fns';
+import { uploadFile, compressImage } from '../services/uploadService';
+import { supabase } from '../services/supabase';
 
 export const ChecklistPage: React.FC = () => {
   useProtectedRoute(['admin', 'user']);
@@ -19,11 +21,15 @@ export const ChecklistPage: React.FC = () => {
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude, error: geoError, isLoading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const [showForm, setShowForm] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
   
   // Estados del formulario con valores por defecto
   const [formData, setFormData] = useState({
     vehiclePlate: selectedEquipment?.license_plate || '',
-    driverName: user?.full_name || user?.username || '', // Usuario logueado, NO el asignado al vehículo
+    driverName: user?.full_name || user?.username || '',
     checkDate: format(new Date(), 'yyyy-MM-dd'),
     tireCondition: 'good',
     brakeCondition: 'good',
@@ -104,16 +110,87 @@ export const ChecklistPage: React.FC = () => {
               </h2>
             </CardHeader>
             <CardBody>
-              <form className="space-y-4" onSubmit={(e) => {
+              <form className="space-y-4" onSubmit={async (e) => {
                 e.preventDefault();
-                const payload = {
-                  ...formData,
-                  gps_latitude: latitude || 4.6097,
-                  gps_longitude: longitude || -74.0817,
-                  created_by: user?.id,
-                };
-                console.log('✅ Guardando checklist:', payload);
-                alert('Guardado a Supabase implementar próximamente');
+                
+                if (!selectedEquipment || !user) {
+                  alert('Selecciona un equipo primero');
+                  return;
+                }
+
+                setIsUploading(true);
+                
+                try {
+                  let photoUrl = '';
+                  
+                  // Subir foto si existe
+                  if (photo) {
+                    console.log('📤 Subiendo foto del checklist...');
+                    const compressed = await compressImage(photo);
+                    const upload = await uploadFile(
+                      compressed,
+                      'checklist-photos',
+                      `${selectedEquipment.license_plate}/${format(new Date(), 'yyyy-MM-dd')}`
+                    );
+                    
+                    if (upload) {
+                      photoUrl = upload.url;
+                    }
+                  }
+
+                  // Guardar checklist en Supabase
+                  const { data, error } = await supabase
+                    .from('pre_operational_checklists')
+                    .insert([{
+                      vehicle_plate: selectedEquipment.license_plate,
+                      driver_name: user.full_name || user.username || '',
+                      check_date: formData.checkDate,
+                      tire_condition: formData.tireCondition,
+                      brake_condition: formData.brakeCondition,
+                      lights_condition: formData.lightsCondition,
+                      fluid_levels: formData.fluidLevels,
+                      engine_condition: formData.engineCondition,
+                      vehicle_condition_assessment: formData.vehicleConditionAssessment,
+                      passed: formData.passed,
+                      photo_url: photoUrl,
+                      location_latitude: latitude || 4.6097,
+                      location_longitude: longitude || -74.0817,
+                      created_by: user.id,
+                      department: 'transport',
+                    }])
+                    .select();
+
+                  if (error) {
+                    console.error('Error guardando:', error);
+                    alert(`Error: ${error.message}`);
+                    return;
+                  }
+
+                  console.log('✅ Checklist guardado:', data);
+                  alert('✅ Checklist registrado exitosamente');
+                  
+                  // Limpiar
+                  setFormData({
+                    vehiclePlate: selectedEquipment.license_plate,
+                    driverName: user.full_name || user.username || '',
+                    checkDate: format(new Date(), 'yyyy-MM-dd'),
+                    tireCondition: 'good',
+                    brakeCondition: 'good',
+                    lightsCondition: 'good',
+                    fluidLevels: 'good',
+                    engineCondition: 'good',
+                    vehicleConditionAssessment: '',
+                    passed: true,
+                  });
+                  setPhoto(null);
+                  setPhotoPreview('');
+                  setShowForm(false);
+                } catch (error: any) {
+                  console.error('Error:', error);
+                  alert(`Error: ${error.message}`);
+                } finally {
+                  setIsUploading(false);
+                }
               }}>
                 {/* Información del Equipo (Solo lectura) */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -217,6 +294,80 @@ export const ChecklistPage: React.FC = () => {
                   required
                 />
 
+                {/* Captura de Foto */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Foto del Vehículo
+                  </label>
+                  
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setPhoto(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => setPhotoPreview(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        if (photoInputRef.current) {
+                          photoInputRef.current.setAttribute('capture', 'environment');
+                          photoInputRef.current.click();
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Tomar Foto
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        if (photoInputRef.current) {
+                          photoInputRef.current.removeAttribute('capture');
+                          photoInputRef.current.click();
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Subir Foto
+                    </Button>
+                  </div>
+
+                  {photoPreview && (
+                    <div className="relative border rounded-lg p-2 bg-gray-50">
+                      <img 
+                        src={photoPreview} 
+                        alt="Preview" 
+                        className="w-full max-h-48 object-contain rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoto(null);
+                          setPhotoPreview('');
+                        }}
+                        className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
@@ -232,11 +383,18 @@ export const ChecklistPage: React.FC = () => {
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)} disabled={isUploading}>
                     Cancelar
                   </Button>
-                  <Button type="submit">
-                    Guardar Inspección
+                  <Button type="submit" disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar Inspección'
+                    )}
                   </Button>
                 </div>
               </form>
