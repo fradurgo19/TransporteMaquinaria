@@ -5,15 +5,15 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
+      refetchOnMount: true, // Cambiar a true para refrescar al montar
+      refetchOnReconnect: true, // Refrescar al reconectar
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados frescos
-      gcTime: 10 * 60 * 1000, // 10 minutos - tiempo de garbage collection (antes cacheTime)
-      structuralSharing: true, // Optimización para compartir estructura de datos
+      staleTime: 1 * 60 * 1000, // Reducir a 1 minuto
+      gcTime: 5 * 60 * 1000, // Reducir a 5 minutos
+      structuralSharing: true,
     },
     mutations: {
-      retry: 0, // No reintentar mutaciones por defecto
+      retry: 0,
     },
   },
 });

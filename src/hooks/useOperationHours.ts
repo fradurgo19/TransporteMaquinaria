@@ -68,8 +68,9 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
       };
     },
     enabled: true, // Siempre ejecutar (admins ven todo)
-    staleTime: 2 * 60 * 1000, // 2 minutos (datos más dinámicos)
-    gcTime: 5 * 60 * 1000,
+    staleTime: 0, // Siempre considerar stale - refrescar cada vez
+    gcTime: 2 * 60 * 1000,
+    refetchOnMount: true, // Siempre refrescar al montar
   });
 };
 
@@ -100,8 +101,9 @@ export const useActiveOperationHour = (vehiclePlate?: string) => {
       return data as OperationHour | null;
     },
     enabled: !!vehiclePlate,
-    staleTime: 30 * 1000, // 30 segundos (datos muy dinámicos)
-    refetchInterval: 60 * 1000, // Refrescar cada minuto si hay registro activo
+    staleTime: 0, // Siempre fresh
+    refetchInterval: 30 * 1000, // Refrescar cada 30 segundos
+    refetchOnMount: true,
   });
 };
 
