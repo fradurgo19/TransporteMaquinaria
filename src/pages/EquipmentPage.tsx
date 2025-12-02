@@ -6,11 +6,12 @@ import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
 import { Badge } from '../atoms/Badge';
-import { Plus, Upload, Download, Eye, X, AlertCircle, Edit, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Upload, Download, Eye, X, AlertCircle, Edit, Save, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { supabase } from '../services/supabase';
 import { useEquipment, useEquipmentMutation } from '../hooks/useEquipment';
+import { processExpirationNotifications } from '../services/emailService';
 
 interface Equipment {
   id: string;
@@ -289,6 +290,15 @@ export const EquipmentPage: React.FC = () => {
     return <Badge variant="success">{days}d</Badge>;
   };
 
+  const handleSendNotifications = async () => {
+    try {
+      const result = await processExpirationNotifications();
+      alert(`✅ Notificaciones procesadas:\n${result.sent} enviadas\n${result.failed} fallidas`);
+    } catch (error: any) {
+      alert(`Error procesando notificaciones: ${error.message}`);
+    }
+  };
+
   return (
     <MainLayout>
       {/* Modal de agregar equipo */}
@@ -511,13 +521,23 @@ export const EquipmentPage: React.FC = () => {
               Control de vehículos y documentación
             </p>
           </div>
-          <Button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            Agregar Equipo
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSendNotifications}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <Mail className="h-5 w-5" />
+              Enviar Alertas
+            </Button>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              Agregar Equipo
+            </Button>
+          </div>
         </div>
 
         <Card>
