@@ -27,8 +27,69 @@ export interface GPSAnalysisResult {
 }
 
 /**
+ * Normalizar nombre de columna (elimina espacios, tildes, mayúsculas)
+ */
+const normalizeColumnName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Eliminar tildes
+    .replace(/\s+/g, '') // Eliminar espacios
+    .trim();
+};
+
+/**
+ * Mapear columnas flexibles del Excel
+ */
+const mapExcelColumns = (row: any): GPSRecord | null => {
+  const keys = Object.keys(row);
+  const normalizedRow: any = {};
+  
+  // Normalizar todas las claves
+  keys.forEach(key => {
+    const normalized = normalizeColumnName(key);
+    normalizedRow[normalized] = row[key];
+  });
+  
+  // Mapeo flexible de columnas (soporta múltiples variantes)
+  const getColumn = (variants: string[]): any => {
+    for (const variant of variants) {
+      const normalized = normalizeColumnName(variant);
+      if (normalizedRow[normalized] !== undefined) {
+        return normalizedRow[normalized];
+      }
+    }
+    return null;
+  };
+  
+  try {
+    const record: GPSRecord = {
+      movil: (getColumn(['Movil', 'Móvil', 'Placa', 'Vehiculo', 'Vehículo']) || '').toString().trim(),
+      alias: (getColumn(['Alias', 'Nombre', 'Empresa', 'Cliente']) || '').toString().trim(),
+      fecha_gps: (getColumn(['Fecha GPS', 'FechaGPS', 'Fecha', 'Date GPS', 'GPS Date']) || '').toString().trim(),
+      fecha_servidor: (getColumn(['Fecha Servidor', 'FechaServidor', 'Server Date', 'Fecha Server']) || '').toString().trim(),
+      localizacion: (getColumn(['Localizacion', 'Localización', 'Ubicacion', 'Ubicación', 'Location', 'Lugar']) || '').toString().trim(),
+      mensaje: (getColumn(['Mensaje', 'Message', 'Estado', 'Status', 'Evento', 'Event']) || '').toString().trim(),
+      lat: parseFloat(getColumn(['Lat', 'Latitud', 'Latitude']) || '0'),
+      lng: parseFloat(getColumn(['Lng', 'Long', 'Lon', 'Longitud', 'Longitude']) || '0'),
+    };
+    
+    // Validar que tenga datos mínimos
+    if (!record.movil || !record.fecha_gps || record.lat === 0 || record.lng === 0) {
+      return null;
+    }
+    
+    return record;
+  } catch (error) {
+    console.warn('⚠️ Error mapeando fila:', error);
+    return null;
+  }
+};
+
+/**
  * Parsear archivo Excel del proveedor GPS
  * Columnas: Movil | Alias | Fecha GPS | Fecha Servidor | Localizacion | Mensaje | Lat | Lng
+ * Soporta diferentes versiones de Excel y orden de columnas
  */
 export const parseGPSExcel = (file: File): Promise<GPSRecord[]> => {
   return new Promise((resolve, reject) => {
@@ -37,36 +98,78 @@ export const parseGPSExcel = (file: File): Promise<GPSRecord[]> => {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        
+        // Soportar diferentes formatos de Excel
+        let workbook: any;
+        try {
+          workbook = XLSX.read(data, { type: 'binary', cellDates: true, dateNF: 'yyyy/mm/dd hh:mm:ss' });
+        } catch {
+          // Intentar con array buffer si falla binary
+          workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy/mm/dd hh:mm:ss' });
+        }
+        
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         
-        // Convertir a JSON
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+        // Convertir a JSON con headers
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { 
+          header: 'A', // Usar headers automáticos primero
+          defval: '',
+          blankrows: false
+        });
         
-        console.log('📊 Excel parseado:', jsonData.length, 'registros');
+        // Si la primera fila parece ser header, usar esos nombres
+        const firstRow = jsonData[0];
+        const hasHeaders = Object.values(firstRow).some((val: any) => 
+          typeof val === 'string' && 
+          (val.toLowerCase().includes('movil') || 
+           val.toLowerCase().includes('placa') ||
+           val.toLowerCase().includes('fecha') ||
+           val.toLowerCase().includes('lat'))
+        );
         
-        // Mapear a nuestra estructura
-        const records: GPSRecord[] = jsonData.map((row: any) => ({
-          movil: row['Movil']?.toString().trim() || '',
-          alias: row['Alias']?.toString().trim() || '',
-          fecha_gps: row['Fecha GPS']?.toString().trim() || '',
-          fecha_servidor: row['Fecha Servidor']?.toString().trim() || '',
-          localizacion: row['Localizacion']?.toString().trim() || '',
-          mensaje: row['Mensaje']?.toString().trim() || '',
-          lat: parseFloat(row['Lat']) || 0,
-          lng: parseFloat(row['Lng']) || 0,
-        }));
+        let dataRows: any[];
+        if (hasHeaders) {
+          // Re-parsear usando la primera fila como headers
+          dataRows = XLSX.utils.sheet_to_json(worksheet, { 
+            defval: '',
+            blankrows: false
+          });
+        } else {
+          dataRows = jsonData;
+        }
         
-        resolve(records.filter(r => r.movil && r.fecha_gps));
-      } catch (error) {
+        console.log('📊 Excel parseado:', dataRows.length, 'registros');
+        console.log('📋 Primera fila (muestra):', dataRows[0]);
+        
+        // Mapear con flexibilidad
+        const records: GPSRecord[] = dataRows
+          .map(row => mapExcelColumns(row))
+          .filter((r): r is GPSRecord => r !== null);
+        
+        if (records.length === 0) {
+          reject(new Error('No se encontraron registros válidos en el Excel.\n\nVerifica que el archivo contenga las columnas: Movil, Fecha GPS, Lat, Lng'));
+          return;
+        }
+        
+        console.log(`✅ ${records.length} registros válidos procesados`);
+        console.log('📋 Primer registro:', records[0]);
+        
+        resolve(records);
+      } catch (error: any) {
         console.error('❌ Error parseando Excel:', error);
-        reject(error);
+        reject(new Error(`Error leyendo Excel: ${error.message}\n\nVerifica que sea un archivo .xlsx o .xls válido`));
       }
     };
     
     reader.onerror = () => reject(new Error('Error leyendo archivo'));
-    reader.readAsBinaryString(file);
+    
+    // Intentar leer como binary primero, luego como array buffer
+    try {
+      reader.readAsBinaryString(file);
+    } catch {
+      reader.readAsArrayBuffer(file);
+    }
   });
 };
 
