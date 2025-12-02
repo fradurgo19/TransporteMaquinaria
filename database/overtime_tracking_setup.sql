@@ -2,6 +2,17 @@
 -- TABLA PARA SEGUIMIENTO DE HORAS EXTRAS
 -- ============================================
 
+-- LIMPIAR PRIMERO (si existe)
+DROP TRIGGER IF EXISTS calculate_overtime_trigger ON overtime_tracking;
+DROP TRIGGER IF EXISTS overtime_tracking_updated_at ON overtime_tracking;
+DROP FUNCTION IF EXISTS calculate_overtime();
+DROP FUNCTION IF EXISTS update_overtime_tracking_updated_at();
+
+DROP POLICY IF EXISTS "Admin transport can manage overtime tracking" ON overtime_tracking;
+DROP POLICY IF EXISTS "Users can view own overtime tracking" ON overtime_tracking;
+DROP POLICY IF EXISTS "Everyone can view festivos" ON festivos_colombia;
+DROP POLICY IF EXISTS "Admin can manage festivos" ON festivos_colombia;
+
 -- Tabla de festivos en Colombia
 CREATE TABLE IF NOT EXISTS festivos_colombia (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
