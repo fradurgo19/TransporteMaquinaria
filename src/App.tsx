@@ -12,6 +12,8 @@ import { FuelPage } from './pages/FuelPage';
 import { OperationsPage } from './pages/OperationsPage';
 import { ChecklistPage } from './pages/ChecklistPage';
 import { TransportRequestsPage } from './pages/TransportRequestsPage';
+import { DeliveriesPage } from './pages/DeliveriesPage';
+import { TrackingPage } from './pages/TrackingPage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { Spinner } from './atoms/Spinner';
 
@@ -156,6 +158,22 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <TransportRequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deliveries"
+        element={
+          <ProtectedRoute>
+            <DeliveriesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tracking/:deliveryId"
+        element={
+          <ProtectedRoute>
+            <TrackingPage />
           </ProtectedRoute>
         }
       />

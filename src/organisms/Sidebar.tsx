@@ -8,6 +8,8 @@ import {
   Activity,
   ClipboardCheck,
   FileText,
+  Package,
+  MapPin,
   LogOut,
   RefreshCw,
 } from 'lucide-react';
@@ -73,6 +75,12 @@ export const Sidebar: React.FC = () => {
       label: 'Solicitudes Transporte',
       icon: FileText,
       roles: ['admin', 'commercial'], // Solo admin y comercial
+    },
+    {
+      path: '/deliveries',
+      label: 'Gestión de Entregas',
+      icon: Package,
+      roles: ['logistics'], // Solo logística
     },
   ];
 
