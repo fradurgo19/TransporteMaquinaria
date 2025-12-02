@@ -33,9 +33,12 @@ export const OperationHoursPage: React.FC = () => {
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude } = useGeolocation();
 
+  // Admins ven todos los registros, usuarios solo los de su vehículo
+  const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
+  
   // Usar hooks optimizados de React Query
   const { data: operationHoursData, isLoading } = useOperationHours({
-    vehiclePlate: selectedEquipment?.license_plate,
+    vehiclePlate: isAdmin ? undefined : selectedEquipment?.license_plate,
   });
 
   const { data: activeRecord } = useActiveOperationHour(selectedEquipment?.license_plate);

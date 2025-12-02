@@ -67,7 +67,7 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
         totalPages: Math.ceil((count || 0) / limit),
       };
     },
-    enabled: !!vehiclePlate, // Solo ejecutar si hay placa
+    enabled: true, // Siempre ejecutar (admins ven todo)
     staleTime: 2 * 60 * 1000, // 2 minutos (datos más dinámicos)
     gcTime: 5 * 60 * 1000,
   });
