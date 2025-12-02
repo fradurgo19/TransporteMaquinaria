@@ -6,7 +6,7 @@ import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Plus, Activity, MapPin, Camera, Loader } from 'lucide-react';
+import { Plus, Activity, MapPin, Camera, Loader, Upload } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
