@@ -6,12 +6,15 @@ import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Plus, Activity, MapPin } from 'lucide-react';
+import { Plus, Activity, MapPin, Camera, Loader } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { format } from 'date-fns';
+import { uploadFile, compressImage } from '../services/uploadService';
+import { supabase } from '../services/supabase';
+import { useRef, useState as useStateReact } from 'react';
 
 export const OperationsPage: React.FC = () => {
   useProtectedRoute(['admin', 'user', 'guest']);
@@ -19,11 +22,15 @@ export const OperationsPage: React.FC = () => {
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude, error: geoError, isLoading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const [showForm, setShowForm] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photosPreviews, setPhotosPreviews] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   
   // Estados del formulario con valores por defecto
   const [formData, setFormData] = useState({
     vehiclePlate: selectedEquipment?.license_plate || '',
-    driverName: user?.full_name || user?.username || '', // Usuario logueado, NO el asignado al vehículo
+    driverName: user?.full_name || user?.username || '',
     operationType: 'loading',
     cargoDescription: '',
     cargoWeight: '',
@@ -93,16 +100,84 @@ export const OperationsPage: React.FC = () => {
               </h2>
             </CardHeader>
             <CardBody>
-              <form className="space-y-4" onSubmit={(e) => {
+              <form className="space-y-4" onSubmit={async (e) => {
                 e.preventDefault();
-                const payload = {
-                  ...formData,
-                  gps_latitude: latitude || 4.6097,
-                  gps_longitude: longitude || -74.0817,
-                  created_by: user?.id,
-                };
-                console.log('🚚 Guardando operación:', payload);
-                alert('Guardado a Supabase implementar próximamente');
+                
+                if (!selectedEquipment || !user) {
+                  alert('Selecciona un equipo primero');
+                  return;
+                }
+
+                setIsUploading(true);
+                
+                try {
+                  const photoUrls: string[] = [];
+                  
+                  // Subir fotos si existen
+                  if (photos.length > 0) {
+                    console.log(`📤 Subiendo ${photos.length} fotos...`);
+                    for (const photo of photos) {
+                      const compressed = await compressImage(photo);
+                      const upload = await uploadFile(
+                        compressed,
+                        'operation-photos',
+                        `${selectedEquipment.license_plate}/${format(new Date(), 'yyyy-MM-dd')}`
+                      );
+                      
+                      if (upload) {
+                        photoUrls.push(upload.url);
+                      }
+                    }
+                  }
+
+                  // Guardar operación en Supabase
+                  const { data, error } = await supabase
+                    .from('operations')
+                    .insert([{
+                      vehicle_plate: selectedEquipment.license_plate,
+                      operation_type: formData.operationType,
+                      cargo_description: formData.cargoDescription,
+                      cargo_weight: formData.cargoWeight ? parseFloat(formData.cargoWeight) : null,
+                      origin: formData.origin,
+                      destination: formData.destination,
+                      notes: formData.notes,
+                      photo_urls: photoUrls,
+                      location_latitude: latitude || 4.6097,
+                      location_longitude: longitude || -74.0817,
+                      created_by: user.id,
+                      department: 'transport',
+                    }])
+                    .select();
+
+                  if (error) {
+                    console.error('Error guardando:', error);
+                    alert(`Error: ${error.message}`);
+                    return;
+                  }
+
+                  console.log('✅ Operación guardada:', data);
+                  alert('✅ Operación registrada exitosamente');
+                  
+                  // Limpiar
+                  setFormData({
+                    vehiclePlate: selectedEquipment.license_plate,
+                    driverName: user.full_name || user.username || '',
+                    operationType: 'loading',
+                    cargoDescription: '',
+                    cargoWeight: '',
+                    origin: '',
+                    destination: '',
+                    notes: '',
+                  });
+                  setPhotos([]);
+                  setPhotosPreviews([]);
+                  setShowForm(false);
+                } catch (error: any) {
+                  console.error('Error:', error);
+                  alert(`Error: ${error.message}`);
+                } finally {
+                  setIsUploading(false);
+                }
               }}>
                 {/* Información del Equipo (Solo lectura) */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -208,12 +283,81 @@ export const OperationsPage: React.FC = () => {
                   placeholder="Observaciones, instrucciones especiales, etc..."
                 />
 
+                {/* Captura de Fotos */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Fotos de la Operación
+                  </label>
+                  
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setPhotos(prev => [...prev, ...files]);
+                      
+                      // Crear previews
+                      files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setPhotosPreviews(prev => [...prev, reader.result as string]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    className="hidden"
+                  />
+                  
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Agregar Fotos ({photos.length})
+                  </Button>
+
+                  {photosPreviews.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {photosPreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img 
+                            src={preview} 
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPhotos(prev => prev.filter((_, i) => i !== index));
+                              setPhotosPreviews(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end space-x-3">
-                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)} disabled={isUploading}>
                     Cancelar
                   </Button>
-                  <Button type="submit">
-                    Guardar Operación
+                  <Button type="submit" disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar Operación'
+                    )}
                   </Button>
                 </div>
               </form>

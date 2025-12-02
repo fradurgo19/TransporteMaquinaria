@@ -13,6 +13,8 @@ import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useOCR } from '../hooks/useOCR';
 import { format } from 'date-fns';
+import { uploadFile, compressImage } from '../services/uploadService';
+import { supabase } from '../services/supabase';
 
 export const FuelPage: React.FC = () => {
   useProtectedRoute(['admin', 'user']);
@@ -24,6 +26,7 @@ export const FuelPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   
   // Estados del formulario con valores por defecto
   const [formData, setFormData] = useState({
@@ -34,6 +37,7 @@ export const FuelPage: React.FC = () => {
     startingOdometer: '',
     endingOdometer: '',
     gasStationName: '',
+    receiptPhotoUrl: '',
   });
 
   const mockFuelLogs = [
@@ -161,17 +165,83 @@ export const FuelPage: React.FC = () => {
               </h2>
             </CardHeader>
             <CardBody>
-              <form className="space-y-4" onSubmit={(e) => {
+              <form className="space-y-4" onSubmit={async (e) => {
                 e.preventDefault();
-                const payload = {
-                  ...formData,
-                  gps_latitude: latitude || 4.6097,
-                  gps_longitude: longitude || -74.0817,
-                  created_by: user?.id,
-                  receipt,
-                };
-                console.log('⛽ Guardando combustible:', payload);
-                alert('Guardado a Supabase implementar próximamente');
+                
+                if (!selectedEquipment || !user) {
+                  alert('Selecciona un equipo primero');
+                  return;
+                }
+
+                setIsUploading(true);
+                
+                try {
+                  let receiptUrl = '';
+                  
+                  // Subir foto si existe
+                  if (receipt) {
+                    console.log('📤 Comprimiendo y subiendo foto...');
+                    const compressed = await compressImage(receipt);
+                    const upload = await uploadFile(
+                      compressed, 
+                      'fuel-receipts', 
+                      selectedEquipment.license_plate
+                    );
+                    
+                    if (upload) {
+                      receiptUrl = upload.url;
+                      console.log('✅ Foto subida:', receiptUrl);
+                    }
+                  }
+
+                  // Guardar en Supabase
+                  const { data, error } = await supabase
+                    .from('fuel_logs')
+                    .insert([{
+                      vehicle_plate: selectedEquipment.license_plate,
+                      fuel_date: formData.fuelDate,
+                      gallons: parseFloat(formData.gallons),
+                      cost: parseFloat(formData.cost),
+                      starting_odometer: parseInt(formData.startingOdometer),
+                      ending_odometer: parseInt(formData.endingOdometer),
+                      gas_station_name: formData.gasStationName,
+                      receipt_photo_url: receiptUrl,
+                      location_latitude: latitude || 4.6097,
+                      location_longitude: longitude || -74.0817,
+                      created_by: user.id,
+                      department: 'transport',
+                    }])
+                    .select();
+
+                  if (error) {
+                    console.error('Error guardando:', error);
+                    alert(`Error: ${error.message}`);
+                    return;
+                  }
+
+                  console.log('✅ Combustible guardado:', data);
+                  alert('✅ Registro de combustible guardado exitosamente');
+                  
+                  // Limpiar formulario
+                  setFormData({
+                    vehiclePlate: selectedEquipment.license_plate,
+                    fuelDate: format(new Date(), 'yyyy-MM-dd'),
+                    gallons: '',
+                    cost: '',
+                    startingOdometer: '',
+                    endingOdometer: '',
+                    gasStationName: '',
+                    receiptPhotoUrl: '',
+                  });
+                  setReceipt(null);
+                  setReceiptPreview('');
+                  setShowForm(false);
+                } catch (error: any) {
+                  console.error('Error:', error);
+                  alert(`Error al guardar: ${error.message}`);
+                } finally {
+                  setIsUploading(false);
+                }
               }}>
                 {/* Información del Equipo (Solo lectura) */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -354,10 +424,19 @@ export const FuelPage: React.FC = () => {
                   )}
                 </div>
                 <div className="flex justify-end space-x-3">
-                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)} disabled={isUploading}>
                     Cancelar
                   </Button>
-                  <Button type="submit">Guardar Registro</Button>
+                  <Button type="submit" disabled={isUploading || !formData.gallons || !formData.cost}>
+                    {isUploading ? (
+                      <>
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar Registro'
+                    )}
+                  </Button>
                 </div>
               </form>
             </CardBody>
