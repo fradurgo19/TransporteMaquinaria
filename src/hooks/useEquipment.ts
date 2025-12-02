@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, EQUIPMENT_LIST_FIELDS, EQUIPMENT_FULL_FIELDS, QUERY_LIMITS } from '../services/supabase';
+import { useDepartment } from './useDepartment';
 
 interface Equipment {
   id: string;
@@ -32,13 +33,15 @@ interface EquipmentQueryParams {
 export const useEquipment = (params: EquipmentQueryParams = {}) => {
   const { page = 1, limit = QUERY_LIMITS.EQUIPMENT, status, search, useFullFields = false } = params;
   const fields = useFullFields ? EQUIPMENT_FULL_FIELDS : EQUIPMENT_LIST_FIELDS;
+  const { department } = useDepartment();
   
   return useQuery({
-    queryKey: ['equipment', page, limit, status, search, useFullFields],
+    queryKey: ['equipment', department, page, limit, status, search, useFullFields],
     queryFn: async () => {
       let query = supabase
         .from('equipment')
         .select(fields, { count: 'exact' })
+        .eq('department', department) // Filtrar por departamento
         .order('license_plate', { ascending: true });
 
       // Aplicar filtros

@@ -127,9 +127,12 @@ export const useOperationHoursMutation = () => {
       return result as OperationHour;
     },
     onSuccess: (data) => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['operation_hours', data.vehicle_plate] });
-      queryClient.invalidateQueries({ queryKey: ['operation_hours', 'active', data.vehicle_plate] });
+      // Invalidar todas las queries de operation_hours para este vehículo
+      queryClient.invalidateQueries({ 
+        queryKey: ['operation_hours'],
+        refetchType: 'active',
+      });
+      console.log('✅ Cache invalidado - datos actualizados');
     },
   });
 
@@ -149,8 +152,12 @@ export const useOperationHoursMutation = () => {
       return data as OperationHour;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['operation_hours', data.vehicle_plate] });
-      queryClient.invalidateQueries({ queryKey: ['operation_hours', 'active'] });
+      // Invalidar todas las queries de operation_hours
+      queryClient.invalidateQueries({ 
+        queryKey: ['operation_hours'],
+        refetchType: 'active',
+      });
+      console.log('✅ Cache invalidado - datos actualizados');
     },
   });
 
