@@ -210,8 +210,8 @@ export const OperationHoursPage: React.FC = () => {
       // Usar interceptor para manejar auto-refresh de sesión
       const result = await executeSupabaseQuery(() =>
         supabase
-          .from('operation_hours')
-          .insert([payload])
+        .from('operation_hours')
+        .insert([payload])
           .select()
       );
 
@@ -538,9 +538,9 @@ export const OperationHoursPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <DataTable
-                data={operationHours}
-                columns={columns}
+            <DataTable
+              data={operationHours}
+              columns={columns}
                 emptyMessage={
                   isAdmin 
                     ? "No hay horas registradas" 

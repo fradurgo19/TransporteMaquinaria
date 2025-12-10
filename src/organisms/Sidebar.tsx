@@ -87,7 +87,13 @@ export const Sidebar: React.FC = () => {
       path: '/transport-requests',
       label: 'Solicitudes Transporte',
       icon: FileText,
-      roles: ['admin', 'commercial'], // Solo admin y comercial
+      roles: ['admin', 'admin_logistics', 'commercial'], // Admin, admin logística y comercial
+    },
+    {
+      path: '/machines-management',
+      label: 'Gestión de Máquinas',
+      icon: Package,
+      roles: ['admin', 'admin_logistics'], // Solo administradores
     },
     {
       path: '/deliveries',

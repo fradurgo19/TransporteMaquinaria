@@ -12,6 +12,7 @@ import { FuelPage } from './pages/FuelPage';
 import { OperationsPage } from './pages/OperationsPage';
 import { ChecklistPage } from './pages/ChecklistPage';
 import { TransportRequestsPage } from './pages/TransportRequestsPage';
+import { MachinesManagementPage } from './pages/MachinesManagementPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
 import { TrackingPage } from './pages/TrackingPage';
 import { LogisticsDashboardPage } from './pages/LogisticsDashboardPage';
@@ -171,6 +172,16 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <TransportRequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/machines-management"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <MachinesManagementPage />
+            </AdminRoute>
           </ProtectedRoute>
         }
       />

@@ -90,26 +90,30 @@ export const ChecklistPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Checklist Pre-Operacional</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900">Checklist Pre-Operacional</h1>
+            <p className="mt-1 text-sm text-gray-600">
               Inspección diaria del vehículo antes de operar
             </p>
           </div>
-          <Button onClick={() => setShowForm(!showForm)}>
+          <Button 
+            onClick={() => setShowForm(!showForm)}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
             <Plus className="h-4 w-4 mr-2" />
             {showForm ? 'Cancelar' : 'Nueva Inspección'}
           </Button>
         </div>
 
         {showForm && (
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+          <Card className="max-w-3xl mx-auto">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+              <h2 className="text-lg font-semibold flex items-center">
                 <ClipboardCheck className="h-5 w-5 mr-2" />
                 Inspección Pre-Operacional
               </h2>
             </CardHeader>
-            <CardBody>
+            <CardBody className="p-6">
               <form className="space-y-4" onSubmit={async (e) => {
                 e.preventDefault();
                 
@@ -192,92 +196,83 @@ export const ChecklistPage: React.FC = () => {
                   setIsUploading(false);
                 }
               }}>
-                {/* Información del Equipo (Solo lectura) */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h3 className="text-sm font-semibold text-blue-900 mb-3">Equipo a Inspeccionar</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Información del Equipo (Compacta) */}
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600 rounded-r-lg p-3 mb-4">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <label className="text-xs text-blue-700 font-medium">Placa del Vehículo</label>
-                      <p className="text-lg font-bold text-blue-900">{selectedEquipment?.license_plate}</p>
+                      <label className="text-xs text-blue-700 font-medium block mb-1">Vehículo</label>
+                      <p className="text-sm font-semibold text-blue-900">{selectedEquipment?.license_plate}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-blue-700 font-medium">Conductor (Usuario Actual)</label>
-                      <p className="text-lg font-bold text-blue-900">{user?.full_name || user?.username}</p>
+                      <label className="text-xs text-blue-700 font-medium block mb-1">Conductor</label>
+                      <p className="text-sm font-semibold text-blue-900">{user?.full_name || user?.username}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-blue-700 font-medium">Fecha de Inspección</label>
-                      <p className="text-sm text-blue-800">{format(new Date(), 'dd/MM/yyyy')}</p>
+                      <label className="text-xs text-blue-700 font-medium block mb-1">Fecha</label>
+                      <p className="text-sm font-semibold text-blue-900">{format(new Date(), 'dd/MM/yyyy')}</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Ubicación GPS */}
-                <div className={`rounded-lg p-4 mb-4 border ${
-                  latitude && longitude 
-                    ? 'bg-green-50 border-green-200' 
-                    : 'bg-yellow-50 border-yellow-200'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold flex items-center">
-                      <MapPin className={`h-4 w-4 mr-2 ${latitude && longitude ? 'text-green-600' : 'text-yellow-600'}`} />
-                      Ubicación GPS
-                    </h3>
+                  {/* GPS compacto */}
+                  <div className="mt-2 pt-2 border-t border-blue-200 flex items-center justify-between">
+                    <div className="flex items-center text-xs">
+                      <MapPin className={`h-3 w-3 mr-1 ${latitude && longitude ? 'text-green-600' : 'text-yellow-600'}`} />
+                      {geoLoading ? (
+                        <span className="text-gray-600">Obteniendo ubicación...</span>
+                      ) : latitude && longitude ? (
+                        <span className="text-green-700">
+                          GPS: {latitude.toFixed(4)}, {longitude.toFixed(4)}
+                        </span>
+                      ) : (
+                        <span className="text-yellow-700">{geoError || 'GPS no disponible'}</span>
+                      )}
+                    </div>
                     {!geoLoading && (
                       <button
                         type="button"
                         onClick={refreshLocation}
-                        className="text-xs text-blue-600 hover:text-blue-700"
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                       >
                         Actualizar
                       </button>
                     )}
                   </div>
-                  {geoLoading ? (
-                    <p className="text-xs text-gray-600">Obteniendo ubicación...</p>
-                  ) : latitude && longitude ? (
-                    <p className="text-xs text-green-700">
-                      ✓ Lat: {latitude.toFixed(6)}, Lng: {longitude.toFixed(6)}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-yellow-700">
-                      ⚠ {geoError || 'Ubicación no disponible'}
-                    </p>
-                  )}
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Condiciones del Vehículo</h3>
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b border-gray-200 pb-2 mb-3">
+                  Condiciones del Vehículo
+                </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <Select
-                    label="Condición de Neumáticos"
+                    label="Neumáticos"
                     value={formData.tireCondition}
                     onChange={(e) => setFormData({ ...formData, tireCondition: e.target.value })}
                     options={conditionOptions}
                     required
                   />
                   <Select
-                    label="Condición de Frenos"
+                    label="Frenos"
                     value={formData.brakeCondition}
                     onChange={(e) => setFormData({ ...formData, brakeCondition: e.target.value })}
                     options={conditionOptions}
                     required
                   />
                   <Select
-                    label="Condición de Luces"
+                    label="Luces"
                     value={formData.lightsCondition}
                     onChange={(e) => setFormData({ ...formData, lightsCondition: e.target.value })}
                     options={conditionOptions}
                     required
                   />
                   <Select
-                    label="Niveles de Fluidos"
+                    label="Fluidos"
                     value={formData.fluidLevels}
                     onChange={(e) => setFormData({ ...formData, fluidLevels: e.target.value })}
                     options={conditionOptions}
                     required
                   />
                   <Select
-                    label="Condición del Motor"
+                    label="Motor"
                     value={formData.engineCondition}
                     onChange={(e) => setFormData({ ...formData, engineCondition: e.target.value })}
                     options={conditionOptions}
@@ -286,16 +281,16 @@ export const ChecklistPage: React.FC = () => {
                 </div>
 
                 <TextArea
-                  label="Evaluación General del Vehículo"
-                  rows={3}
+                  label="Evaluación General"
+                  rows={2}
                   value={formData.vehicleConditionAssessment}
                   onChange={(e) => setFormData({ ...formData, vehicleConditionAssessment: e.target.value })}
-                  placeholder="Describe la condición general del vehículo, problemas encontrados, etc..."
+                  placeholder="Describe la condición general del vehículo..."
                   required
                 />
 
-                {/* Captura de Foto */}
-                <div className="space-y-3">
+                {/* Captura de Foto - Compacta */}
+                <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Foto del Vehículo
                   </label>
@@ -320,6 +315,7 @@ export const ChecklistPage: React.FC = () => {
                     <Button
                       type="button"
                       variant="secondary"
+                      size="sm"
                       onClick={() => {
                         if (photoInputRef.current) {
                           photoInputRef.current.setAttribute('capture', 'environment');
@@ -328,12 +324,13 @@ export const ChecklistPage: React.FC = () => {
                       }}
                       className="flex-1"
                     >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Tomar Foto
+                      <Camera className="h-4 w-4 mr-1" />
+                      Tomar
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
+                      size="sm"
                       onClick={() => {
                         if (photoInputRef.current) {
                           photoInputRef.current.removeAttribute('capture');
@@ -342,17 +339,17 @@ export const ChecklistPage: React.FC = () => {
                       }}
                       className="flex-1"
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Subir Foto
+                      <Upload className="h-4 w-4 mr-1" />
+                      Subir
                     </Button>
                   </div>
 
                   {photoPreview && (
-                    <div className="relative border rounded-lg p-2 bg-gray-50">
+                    <div className="relative border-2 border-blue-200 rounded-lg p-2 bg-gray-50">
                       <img 
                         src={photoPreview} 
                         alt="Preview" 
-                        className="w-full max-h-48 object-contain rounded"
+                        className="w-full max-h-32 object-contain rounded"
                       />
                       <button
                         type="button"
@@ -360,7 +357,7 @@ export const ChecklistPage: React.FC = () => {
                           setPhoto(null);
                           setPhotoPreview('');
                         }}
-                        className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center"
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
                       >
                         ×
                       </button>
@@ -368,25 +365,36 @@ export const ChecklistPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <label className="flex items-center space-x-3 cursor-pointer">
+                <div className="bg-blue-50 border-l-4 border-blue-600 rounded-r-lg p-3">
+                  <label className="flex items-center space-x-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.passed}
                       onChange={(e) => setFormData({ ...formData, passed: e.target.checked })}
-                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                     />
                     <span className="text-sm font-medium text-gray-900">
-                      El vehículo está en condiciones de operar
+                      Vehículo en condiciones de operar
                     </span>
                   </label>
                 </div>
 
-                <div className="flex justify-end space-x-3">
-                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)} disabled={isUploading}>
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => setShowForm(false)} 
+                    disabled={isUploading}
+                  >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isUploading}>
+                  <Button 
+                    type="submit" 
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={isUploading}
+                  >
                     {isUploading ? (
                       <>
                         <Loader className="h-4 w-4 mr-2 animate-spin" />

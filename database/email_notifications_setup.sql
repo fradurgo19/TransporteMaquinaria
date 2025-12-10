@@ -20,15 +20,17 @@ CREATE INDEX IF NOT EXISTS idx_email_notifications_equipment ON email_notificati
 CREATE INDEX IF NOT EXISTS idx_email_notifications_sent_at ON email_notifications(sent_at);
 
 -- Vista para documentos próximos a vencer
-CREATE OR REPLACE VIEW documents_expiring_soon AS
+DROP VIEW IF EXISTS documents_expiring_soon;
+
+CREATE VIEW documents_expiring_soon AS
 SELECT 
   e.id as equipment_id,
-  e.license_plate,
-  e.driver_name,
-  e.brand,
-  e.site_location,
-  e.department,
-  'tecno' as document_type,
+  e.license_plate::TEXT as license_plate,
+  e.driver_name::TEXT as driver_name,
+  e.brand::TEXT as brand,
+  e.site_location::TEXT as site_location,
+  e.department::TEXT as department,
+  'tecno'::TEXT as document_type,
   e.technical_inspection_expiration as expiration_date,
   e.technical_inspection_expiration - CURRENT_DATE as days_until_expiration
 FROM equipment e
@@ -39,12 +41,12 @@ UNION ALL
 
 SELECT 
   e.id,
-  e.license_plate,
-  e.driver_name,
-  e.brand,
-  e.site_location,
-  e.department,
-  'soat',
+  e.license_plate::TEXT,
+  e.driver_name::TEXT,
+  e.brand::TEXT,
+  e.site_location::TEXT,
+  e.department::TEXT,
+  'soat'::TEXT,
   e.soat_expiration,
   e.soat_expiration - CURRENT_DATE
 FROM equipment e
@@ -55,12 +57,12 @@ UNION ALL
 
 SELECT 
   e.id,
-  e.license_plate,
-  e.driver_name,
-  e.brand,
-  e.site_location,
-  e.department,
-  'poliza',
+  e.license_plate::TEXT,
+  e.driver_name::TEXT,
+  e.brand::TEXT,
+  e.site_location::TEXT,
+  e.department::TEXT,
+  'poliza'::TEXT,
   e.insurance_policy_expiration,
   e.insurance_policy_expiration - CURRENT_DATE
 FROM equipment e
@@ -71,12 +73,12 @@ UNION ALL
 
 SELECT 
   e.id,
-  e.license_plate,
-  e.driver_name,
-  e.brand,
-  e.site_location,
-  e.department,
-  'licencia',
+  e.license_plate::TEXT,
+  e.driver_name::TEXT,
+  e.brand::TEXT,
+  e.site_location::TEXT,
+  e.department::TEXT,
+  'licencia'::TEXT,
   e.driver_license_expiration,
   e.driver_license_expiration - CURRENT_DATE
 FROM equipment e

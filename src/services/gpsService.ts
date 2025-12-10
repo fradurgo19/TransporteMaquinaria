@@ -206,6 +206,43 @@ export const parseGPSDate = (dateStr: string): string => {
 };
 
 /**
+ * Extraer fecha normalizada (YYYY-MM-DD) de un GPSRecord
+ * Maneja diferentes formatos: string, Date object, timestamp
+ */
+const extractNormalizedDate = (record: GPSRecord): string | null => {
+  try {
+    let dateStr: string;
+    
+    if (typeof record.fecha_gps === 'string') {
+      const datePart = record.fecha_gps.split(' ')[0]; // "2025/07/01" o "2025-07-01"
+      dateStr = datePart.replace(/\//g, '-'); // Normalizar a "2025-07-01"
+    } else if (record.fecha_gps instanceof Date) {
+      if (isNaN(record.fecha_gps.getTime())) {
+        return null;
+      }
+      dateStr = record.fecha_gps.toISOString().split('T')[0]; // "2025-07-01"
+    } else {
+      const dateObj = new Date(record.fecha_gps);
+      if (!isNaN(dateObj.getTime())) {
+        dateStr = dateObj.toISOString().split('T')[0];
+      } else {
+        return null;
+      }
+    }
+    
+    // Validar formato YYYY-MM-DD
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateStr;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('⚠️ Error extrayendo fecha normalizada:', error, record.fecha_gps);
+    return null;
+  }
+};
+
+/**
  * Verificar si un mensaje indica que el móvil está encendido
  * Soporta diferentes formatos: "Movil Encendido", "Movil  Encendido", "Reporte por tiempo (Movil Encendido)", etc.
  */
@@ -942,5 +979,165 @@ export const getRouteData = async (overtimeTrackingId: string) => {
       lng: routeEndPoint.lng,
     } : null,
   };
+};
+
+/**
+ * Resultado del procesamiento multi-día
+ */
+export interface MultiDayProcessResult {
+  totalRecords: number;
+  processedDays: number;
+  successfulDays: number;
+  failedDays: number;
+  results: Array<{
+    placa: string;
+    fecha: string;
+    overtimeTrackingId: string | null;
+    success: boolean;
+    message: string;
+    recordsProcessed: number;
+  }>;
+}
+
+/**
+ * Procesar Excel GPS con múltiples días para una o más placas
+ * Identifica automáticamente los registros de overtime_tracking correspondientes
+ * y procesa cada día por separado
+ */
+export const processMultiDayGPSExcel = async (
+  file: File
+): Promise<MultiDayProcessResult> => {
+  console.log('📁 Procesando Excel GPS multi-día...');
+  
+  // Parsear Excel
+  const allRecords = await parseGPSExcel(file);
+  console.log(`✅ ${allRecords.length} registros GPS parseados del Excel`);
+  
+  if (allRecords.length === 0) {
+    throw new Error('El archivo Excel está vacío o no tiene datos válidos');
+  }
+  
+  // Agrupar registros por placa y fecha
+  const groupedByPlacaAndDate = new Map<string, GPSRecord[]>();
+  
+  for (const record of allRecords) {
+    const placa = record.movil.toUpperCase().trim();
+    const fecha = extractNormalizedDate(record);
+    
+    if (!fecha) {
+      console.warn(`⚠️ Registro sin fecha válida ignorado:`, record);
+      continue;
+    }
+    
+    const key = `${placa}|${fecha}`;
+    
+    if (!groupedByPlacaAndDate.has(key)) {
+      groupedByPlacaAndDate.set(key, []);
+    }
+    
+    groupedByPlacaAndDate.get(key)!.push(record);
+  }
+  
+  console.log(`📊 Encontrados ${groupedByPlacaAndDate.size} combinaciones únicas de placa+fecha`);
+  
+  // Para cada combinación placa+fecha, buscar el registro de overtime_tracking
+  const results: MultiDayProcessResult['results'] = [];
+  let successfulDays = 0;
+  let failedDays = 0;
+  
+  for (const [key, records] of groupedByPlacaAndDate.entries()) {
+    const [placa, fecha] = key.split('|');
+    
+    console.log(`\n🔍 Procesando: Placa=${placa}, Fecha=${fecha}, Registros=${records.length}`);
+    
+    // Buscar registro de overtime_tracking correspondiente
+    const { data: overtimeRecord, error: searchError } = await supabase
+      .from('overtime_tracking')
+      .select('id, placa, fecha')
+      .eq('placa', placa)
+      .eq('fecha', fecha)
+      .maybeSingle();
+    
+    if (searchError) {
+      console.error(`❌ Error buscando registro overtime_tracking:`, searchError);
+      results.push({
+        placa,
+        fecha,
+        overtimeTrackingId: null,
+        success: false,
+        message: `Error buscando registro: ${searchError.message}`,
+        recordsProcessed: records.length,
+      });
+      failedDays++;
+      continue;
+    }
+    
+    if (!overtimeRecord) {
+      console.warn(`⚠️ No se encontró registro de overtime_tracking para Placa=${placa}, Fecha=${fecha}`);
+      results.push({
+        placa,
+        fecha,
+        overtimeTrackingId: null,
+        success: false,
+        message: `No existe registro de horas extras para esta placa y fecha. Debe sincronizarse primero desde Operation Hours.`,
+        recordsProcessed: records.length,
+      });
+      failedDays++;
+      continue;
+    }
+    
+    // Procesar este día (similar a handleGPSUpload pero sin validación de fecha/placa)
+    try {
+      console.log(`✅ Registro encontrado: ID=${overtimeRecord.id}`);
+      
+      // Analizar ruta en memoria
+      console.log('🔍 Analizando ruta en memoria...');
+      const analysis = await analyzeAndUpdateRoute(overtimeRecord.id, records);
+      console.log('✅ Ruta analizada:', analysis);
+      
+      // Subir datos GPS a Supabase
+      console.log('📤 Subiendo datos GPS a la base de datos...');
+      await uploadGPSData(overtimeRecord.id, records);
+      console.log('✅ Datos GPS subidos');
+      
+      results.push({
+        placa,
+        fecha,
+        overtimeTrackingId: overtimeRecord.id,
+        success: true,
+        message: `✅ Procesado correctamente\nInicio: ${analysis.entrada ? new Date(analysis.entrada).toLocaleString('es-CO') : 'N/A'}\nFin: ${analysis.salida ? new Date(analysis.salida).toLocaleString('es-CO') : 'N/A'}`,
+        recordsProcessed: records.length,
+      });
+      successfulDays++;
+      
+    } catch (error: any) {
+      console.error(`❌ Error procesando ${placa} ${fecha}:`, error);
+      results.push({
+        placa,
+        fecha,
+        overtimeTrackingId: overtimeRecord.id,
+        success: false,
+        message: `Error: ${error.message || 'Error desconocido'}`,
+        recordsProcessed: records.length,
+      });
+      failedDays++;
+    }
+  }
+  
+  const result: MultiDayProcessResult = {
+    totalRecords: allRecords.length,
+    processedDays: groupedByPlacaAndDate.size,
+    successfulDays,
+    failedDays,
+    results,
+  };
+  
+  console.log(`\n✅ Procesamiento multi-día completado:`);
+  console.log(`   - Total registros: ${result.totalRecords}`);
+  console.log(`   - Días procesados: ${result.processedDays}`);
+  console.log(`   - Exitosos: ${result.successfulDays}`);
+  console.log(`   - Fallidos: ${result.failedDays}`);
+  
+  return result;
 };
 

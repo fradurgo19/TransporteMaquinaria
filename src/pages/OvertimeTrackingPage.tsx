@@ -8,7 +8,7 @@ import { RefreshCw, Download, Upload, Edit2, Save, X, FileSpreadsheet, MapPin } 
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, parseISO } from 'date-fns';
 import { useOvertimeTracking, useSyncOvertimeTracking, useUpdateOvertimeTracking, OvertimeTracking } from '../hooks/useOvertimeTracking';
-import { parseGPSExcel, uploadGPSData, analyzeAndUpdateRoute, validateGPSExcel } from '../services/gpsService';
+import { parseGPSExcel, uploadGPSData, analyzeAndUpdateRoute, validateGPSExcel, processMultiDayGPSExcel, MultiDayProcessResult } from '../services/gpsService';
 import { GPSRouteMap } from '../components/GPSRouteMap';
 import { supabase } from '../services/supabase';
 
@@ -23,6 +23,8 @@ export const OvertimeTrackingPage: React.FC = () => {
   const [editData, setEditData] = useState<{ ubicacion: string; actividad: string }>({ ubicacion: '', actividad: '' });
   const [uploadingGPS, setUploadingGPS] = useState<string | null>(null);
   const [viewingMap, setViewingMap] = useState<string | null>(null);
+  const [uploadingMultiDay, setUploadingMultiDay] = useState(false);
+  const [multiDayResult, setMultiDayResult] = useState<MultiDayProcessResult | null>(null);
 
   const { data: overtimeData, isLoading } = useOvertimeTracking({
     page: currentPage,
@@ -150,6 +152,48 @@ export const OvertimeTrackingPage: React.FC = () => {
     input.click();
   };
 
+  const handleMultiDayGPSUpload = async (file: File) => {
+    try {
+      setUploadingMultiDay(true);
+      setMultiDayResult(null);
+      console.log('📁 Procesando Excel GPS multi-día...');
+      
+      const result = await processMultiDayGPSExcel(file);
+      setMultiDayResult(result);
+      
+      // Mostrar resumen
+      const successMessage = `✅ Procesamiento Multi-Día Completado\n\n` +
+        `📊 Total registros: ${result.totalRecords}\n` +
+        `📅 Días procesados: ${result.processedDays}\n` +
+        `✅ Exitosos: ${result.successfulDays}\n` +
+        `❌ Fallidos: ${result.failedDays}\n\n` +
+        `${result.failedDays > 0 ? '⚠️ Algunos días no se pudieron procesar. Revisa los detalles abajo.' : '🎉 Todos los días se procesaron correctamente.'}`;
+      
+      alert(successMessage);
+      
+      // Refrescar datos
+      window.location.reload();
+    } catch (error: any) {
+      console.error('❌ Error procesando Excel multi-día:', error);
+      alert(`Error procesando Excel multi-día: ${error.message || 'Error desconocido'}\n\nVerifica la consola para más detalles.`);
+    } finally {
+      setUploadingMultiDay(false);
+    }
+  };
+
+  const triggerMultiDayGPSUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls';
+    input.onchange = (e: any) => {
+      const file = e.target?.files?.[0];
+      if (file) {
+        handleMultiDayGPSUpload(file);
+      }
+    };
+    input.click();
+  };
+
   const formatDecimal = (value: number | null) => {
     if (value === null || value === undefined) return '-';
     return value.toFixed(4);
@@ -176,6 +220,15 @@ export const OvertimeTrackingPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={triggerMultiDayGPSUpload} 
+              disabled={uploadingMultiDay}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              title="Cargar Excel GPS con múltiples días para una o más placas. El sistema identificará automáticamente los registros correspondientes."
+            >
+              <Upload className={`h-4 w-4 mr-2 ${uploadingMultiDay ? 'animate-spin' : ''}`} />
+              {uploadingMultiDay ? 'Procesando...' : 'Cargar Excel Multi-Día GPS'}
+            </Button>
             <Button onClick={handleSync} disabled={syncMutation.isPending}>
               <RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
               {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar desde Operation Hours'}
@@ -396,6 +449,76 @@ export const OvertimeTrackingPage: React.FC = () => {
             )}
           </CardBody>
         </Card>
+
+        {/* Resultado de procesamiento multi-día */}
+        {multiDayResult && (
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900">
+                📊 Resultado del Procesamiento Multi-Día
+              </h3>
+            </CardHeader>
+            <CardBody>
+              <div className="mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-600">Total Registros</p>
+                  <p className="text-2xl font-bold text-blue-900">{multiDayResult.totalRecords}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-600">Días Procesados</p>
+                  <p className="text-2xl font-bold text-gray-900">{multiDayResult.processedDays}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="text-sm text-green-600">Exitosos</p>
+                  <p className="text-2xl font-bold text-green-900">{multiDayResult.successfulDays}</p>
+                </div>
+                <div className="bg-red-50 p-3 rounded-lg">
+                  <p className="text-sm text-red-600">Fallidos</p>
+                  <p className="text-2xl font-bold text-red-900">{multiDayResult.failedDays}</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 max-h-96 overflow-y-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Placa</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Fecha</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase">Registros</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase">Estado</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase">Mensaje</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {multiDayResult.results.map((result, index) => (
+                      <tr key={index} className={result.success ? 'bg-green-50' : 'bg-red-50'}>
+                        <td className="px-3 py-2 font-semibold text-gray-900">{result.placa}</td>
+                        <td className="px-3 py-2 text-gray-700">{result.fecha}</td>
+                        <td className="px-3 py-2 text-center text-gray-700">{result.recordsProcessed}</td>
+                        <td className="px-3 py-2 text-center">
+                          {result.success ? (
+                            <Badge variant="success" size="sm">✅ Exitoso</Badge>
+                          ) : (
+                            <Badge variant="error" size="sm">❌ Fallido</Badge>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 whitespace-pre-line text-xs">
+                          {result.message}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-4 flex justify-end">
+                <Button variant="secondary" onClick={() => setMultiDayResult(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        )}
 
         {/* Leyenda de cálculos */}
         <Card>
