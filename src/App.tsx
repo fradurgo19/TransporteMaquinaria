@@ -13,6 +13,7 @@ import { OperationsPage } from './pages/OperationsPage';
 import { ChecklistPage } from './pages/ChecklistPage';
 import { TransportRequestsPage } from './pages/TransportRequestsPage';
 import { MachinesManagementPage } from './pages/MachinesManagementPage';
+import { ManufacturerKPGPage } from './pages/ManufacturerKPGPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
 import { TrackingPage } from './pages/TrackingPage';
 import { LogisticsDashboardPage } from './pages/LogisticsDashboardPage';
@@ -181,6 +182,16 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <AdminRoute>
               <MachinesManagementPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manufacturer-kpg"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <ManufacturerKPGPage />
             </AdminRoute>
           </ProtectedRoute>
         }

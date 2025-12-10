@@ -7,6 +7,8 @@ interface DashboardMetrics {
   fuelConsumption: number;
   activeVehicles: number;
   expiringDocuments: number;
+  kmsRecorridos: number;
+  kmPerGallon: number;
 }
 
 interface Alert {
@@ -35,11 +37,11 @@ export const useDashboardMetrics = () => {
             .eq('status', 'active')
         ),
         
-        // Consumo total de combustible (últimos 30 días)
+        // Consumo total de combustible y métricas (últimos 30 días)
         executeSupabaseQuery(() =>
           supabase
             .from('fuel_logs')
-            .select('gallons, cost')
+            .select('gallons, cost, distance_traveled, fuel_efficiency, starting_odometer, ending_odometer')
             .gte('fuel_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         ),
         
@@ -59,6 +61,23 @@ export const useDashboardMetrics = () => {
       const activeVehicles = equipmentResponse?.count || 0;
       const fuelData = fuelResponse?.data || fuelResponse || [];
       const fuelConsumption = fuelData.reduce((sum: number, log: any) => sum + (log.gallons || 0), 0) || 0;
+      
+      // Calcular Kms Recorridos y Km/Galon
+      let kmsRecorridos = 0;
+      let totalGallons = 0;
+      
+      fuelData.forEach((log: any) => {
+        // Calcular distancia recorrida
+        const distance = log.distance_traveled || 
+          (log.ending_odometer && log.starting_odometer 
+            ? log.ending_odometer - log.starting_odometer 
+            : 0);
+        kmsRecorridos += distance || 0;
+        totalGallons += log.gallons || 0;
+      });
+      
+      // Calcular Km/Galon promedio
+      const kmPerGallon = totalGallons > 0 ? kmsRecorridos / totalGallons : 0;
       
       // Contar documentos próximos a vencer (próximos 30 días)
       const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -83,14 +102,16 @@ export const useDashboardMetrics = () => {
         });
       }
 
-      // TODO: Calcular kilómetros totales desde operation_hours o fuel_logs
-      const totalKilometers = 0;
+      // Calcular kilómetros totales desde fuel_logs
+      const totalKilometers = kmsRecorridos;
 
       return {
-        totalKilometers,
+        totalKilometers: Math.round(totalKilometers * 100) / 100,
         fuelConsumption: Math.round(fuelConsumption * 10) / 10,
         activeVehicles,
         expiringDocuments,
+        kmsRecorridos: Math.round(kmsRecorridos * 100) / 100,
+        kmPerGallon: Math.round(kmPerGallon * 100) / 100,
       };
     },
     staleTime: 2 * 60 * 1000, // 2 minutos

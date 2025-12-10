@@ -88,9 +88,9 @@ export const ChecklistPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Checklist Pre-Operacional</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Checklist Pre-Operacional</h1>
             <p className="mt-1 text-sm text-gray-600">
               Inspección diaria del vehículo antes de operar
             </p>
@@ -197,8 +197,8 @@ export const ChecklistPage: React.FC = () => {
                 }
               }}>
                 {/* Información del Equipo (Compacta) */}
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600 rounded-r-lg p-3 mb-4">
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600 rounded-r-lg p-2 sm:p-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div>
                       <label className="text-xs text-blue-700 font-medium block mb-1">Vehículo</label>
                       <p className="text-sm font-semibold text-blue-900">{selectedEquipment?.license_plate}</p>

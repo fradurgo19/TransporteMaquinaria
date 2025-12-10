@@ -12,7 +12,7 @@ export const Input = React.memo<InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
             {label}
           </label>
         )}
@@ -25,8 +25,8 @@ export const Input = React.memo<InputProps>(
           <input
             className={`
               block w-full rounded-lg border ${error ? 'border-red-500' : 'border-gray-300'}
-              ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2
-              text-gray-900 placeholder-gray-400
+              ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 sm:py-2.5
+              text-sm sm:text-base text-gray-900 placeholder-gray-400
               focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
               disabled:bg-gray-100 disabled:cursor-not-allowed
               transition-colors duration-200

@@ -96,6 +96,12 @@ export const Sidebar: React.FC = () => {
       roles: ['admin', 'admin_logistics'], // Solo administradores
     },
     {
+      path: '/manufacturer-kpg',
+      label: 'KPG de Fábrica',
+      icon: Fuel,
+      roles: ['admin', 'admin_logistics'], // Solo administradores
+    },
+    {
       path: '/deliveries',
       label: 'Gestión de Entregas',
       icon: Package,
@@ -108,7 +114,7 @@ export const Sidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-64 bg-white shadow-md h-full border-r border-gray-200 flex flex-col">
+    <aside className="w-64 bg-white shadow-md h-full border-r border-gray-200 flex flex-col overflow-y-auto">
       <nav className="mt-6 px-4 flex-1">
         <ul className="space-y-2">
           {filteredNavItems.map((item) => {
@@ -120,7 +126,7 @@ export const Sidebar: React.FC = () => {
                 <Link
                   to={item.path}
                   className={`
-                    flex items-center px-4 py-3 rounded-lg transition-colors duration-200
+                    flex items-center px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors duration-200 text-sm sm:text-base
                     ${
                       isActive
                         ? 'bg-primary-50 text-primary font-medium'

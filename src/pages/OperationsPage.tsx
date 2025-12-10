@@ -477,9 +477,9 @@ export const OperationsPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Operaciones</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Operaciones</h1>
             <p className="mt-2 text-gray-600">
               Registra carga, inicio de ruta y entregas de forma secuencial
             </p>

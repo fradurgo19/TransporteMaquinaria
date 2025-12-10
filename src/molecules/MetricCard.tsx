@@ -20,8 +20,8 @@ export const MetricCard = React.memo<MetricCardProps>(
         <CardBody>
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600">{title}</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600">{title}</p>
+              <p className="mt-1 sm:mt-2 text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{value}</p>
               {trend && (
                 <p
                   className={`mt-2 text-sm ${
