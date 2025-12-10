@@ -417,16 +417,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return; // Aún estamos inicializando, no hacer nada
     }
     
+    // Timeout de seguridad: si después de 10 segundos aún estamos cargando, forzar resolución
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.warn('⏱️ Timeout de carga de autenticación, forzando resolución...');
+        setIsLoading(false);
+      }
+    }, 10000); // 10 segundos máximo
+
     // Si tenemos un usuario y aún estamos cargando, dejar de cargar
     if (user && isLoading) {
       console.log('✅ User state synchronized, setting isLoading to false');
       setIsLoading(false);
     }
     // Si no hay usuario y la inicialización terminó, también dejar de cargar
-    else if (!user && isLoading && !fetchingProfileRef.current) {
+    else if (!user && isLoading && !fetchingProfileRef.current && !initInProgressRef.current) {
       console.log('✅ No user after init, setting isLoading to false');
       setIsLoading(false);
     }
+
+    return () => clearTimeout(timeoutId);
   }, [user, isLoading]);
 
   const login = async (email: string, password: string) => {

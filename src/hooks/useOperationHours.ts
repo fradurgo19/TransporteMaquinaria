@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, QUERY_LIMITS } from '../services/supabase';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 
 interface OperationHour {
   id: string;
@@ -32,6 +33,9 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
   return useQuery({
     queryKey: ['operation_hours', vehiclePlate, page, limit, status],
     queryFn: async () => {
+      console.log(`📋 Cargando operation hours - Placa: ${vehiclePlate || 'TODAS'}, Página: ${page}`);
+      
+      // Construir query
       let query = supabase
         .from('operation_hours')
         .select('*', { count: 'exact' })
@@ -52,27 +56,40 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
       const to = from + limit - 1;
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
+      // Usar interceptor para manejar auto-refresh de sesión
+      const result = await executeSupabaseQuery(() => query);
 
-      if (error) {
-        console.error('Error fetching operation hours:', error);
-        throw error;
+      if (result.error) {
+        console.error('❌ Error fetching operation hours:', result.error);
+        throw result.error;
       }
 
+      // Extraer datos de la respuesta
+      const responseData = result.data as any;
+      const data = (responseData?.data || responseData || []) as OperationHour[];
+      const count = responseData?.count || 0;
+
+      console.log(`✅ Operation hours cargadas: ${data.length} registros (Total: ${count})`);
+
       return {
-        data: data as OperationHour[],
-        total: count || 0,
+        data,
+        total: count,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages: Math.ceil(count / limit),
       };
     },
-    enabled: true, // Siempre ejecutar (admins ven todo)
-    staleTime: 0,
-    gcTime: 2 * 60 * 1000,
+    enabled: true, // Siempre ejecutar (admins ven todo, usuarios solo su vehículo)
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
     refetchOnMount: true,
-    refetchInterval: 10 * 1000, // Polling cada 10 segundos
-    refetchIntervalInBackground: false, // Solo cuando está activa
+    refetchOnWindowFocus: false, // Ya está desactivado globalmente
+    retry: (failureCount, error: any) => {
+      // Reintentar hasta 2 veces
+      return failureCount < 2;
+    },
+    // Remover polling automático - solo refrescar cuando sea necesario
+    // refetchInterval: 10 * 1000, // Comentado para evitar carga constante
   });
 };
 
@@ -85,28 +102,40 @@ export const useActiveOperationHour = (vehiclePlate?: string) => {
     queryFn: async () => {
       if (!vehiclePlate) return null;
 
-      const { data, error } = await supabase
-        .from('operation_hours')
-        .select('*')
-        .eq('vehicle_plate', vehiclePlate)
-        .eq('status', 'in_progress')
-        .order('check_in_time', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Usar interceptor para manejar auto-refresh de sesión
+      const result = await executeSupabaseQuery(() =>
+        supabase
+          .from('operation_hours')
+          .select('*')
+          .eq('vehicle_plate', vehiclePlate)
+          .eq('status', 'in_progress')
+          .order('check_in_time', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      );
 
-      if (error && error.code !== 'PGRST116') {
+      if (result.error) {
         // PGRST116 es "not found", lo cual es válido
-        console.error('Error fetching active operation hour:', error);
-        throw error;
+        if (result.error.code === 'PGRST116') {
+          return null;
+        }
+        console.error('❌ Error fetching active operation hour:', result.error);
+        throw result.error;
       }
 
-      return data as OperationHour | null;
+      const responseData = result.data as any;
+      return (responseData?.data || responseData || null) as OperationHour | null;
     },
     enabled: !!vehiclePlate,
-    staleTime: 0,
-    refetchInterval: 5 * 1000, // Polling cada 5 segundos para registro activo
+    staleTime: 30 * 1000, // 30 segundos
+    refetchInterval: 10 * 1000, // Polling cada 10 segundos para registro activo
     refetchIntervalInBackground: false,
     refetchOnMount: true,
+    retry: (failureCount, error: any) => {
+      // No reintentar si es "not found"
+      if (error?.code === 'PGRST116') return false;
+      return failureCount < 2;
+    },
   });
 };
 

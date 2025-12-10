@@ -107,11 +107,21 @@ BEGIN
   NEW.tipo_dia := v_tipo_dia;
   NEW.mes := v_mes;
   
-  -- Convertir horas a decimal (7:00 = 0.291667)
-  v_hora_entrada_decimal := EXTRACT(HOUR FROM NEW.hora_entrada)::DECIMAL / 24 + 
-                            EXTRACT(MINUTE FROM NEW.hora_entrada)::DECIMAL / 1440;
+  -- Usar valores GPS si están disponibles, sino usar valores normales
+  -- Esto permite que los cálculos se basen en los datos del proveedor GPS
+  -- Priorizar hora_entrada_gps si existe, sino usar hora_entrada
+  IF NEW.hora_entrada_gps IS NOT NULL THEN
+    v_hora_entrada_decimal := EXTRACT(HOUR FROM NEW.hora_entrada_gps)::DECIMAL / 24 + 
+                              EXTRACT(MINUTE FROM NEW.hora_entrada_gps)::DECIMAL / 1440;
+  ELSE
+    v_hora_entrada_decimal := EXTRACT(HOUR FROM NEW.hora_entrada)::DECIMAL / 24 + 
+                              EXTRACT(MINUTE FROM NEW.hora_entrada)::DECIMAL / 1440;
+  END IF;
   
-  IF NEW.hora_salida IS NOT NULL THEN
+  IF NEW.hora_salida_gps IS NOT NULL THEN
+    v_hora_salida_decimal := EXTRACT(HOUR FROM NEW.hora_salida_gps)::DECIMAL / 24 + 
+                             EXTRACT(MINUTE FROM NEW.hora_salida_gps)::DECIMAL / 1440;
+  ELSIF NEW.hora_salida IS NOT NULL THEN
     v_hora_salida_decimal := EXTRACT(HOUR FROM NEW.hora_salida)::DECIMAL / 24 + 
                              EXTRACT(MINUTE FROM NEW.hora_salida)::DECIMAL / 1440;
   ELSE

@@ -16,6 +16,8 @@ import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } 
 import { supabase } from '../services/supabase';
 import { useEquipment as useEquipmentHook } from '../hooks/useEquipment';
 import { Select } from '../atoms/Select';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface OperationHour {
   id: string;
@@ -51,14 +53,20 @@ export const OperationHoursPage: React.FC = () => {
   const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
   
   // Usar hooks optimizados de React Query
-  const { data: operationHoursData, isLoading } = useOperationHours({
+  const { 
+    data: operationHoursData, 
+    isLoading, 
+    error: operationHoursError,
+    isError 
+  } = useOperationHours({
     vehiclePlate: isAdmin ? undefined : selectedEquipment?.license_plate,
   });
 
   const { data: activeRecord } = useActiveOperationHour(selectedEquipment?.license_plate);
   
   const { startWork, finishWork } = useOperationHoursMutation();
-
+  const queryClient = useQueryClient();
+      
   const operationHours = operationHoursData?.data || [];
 
   // Obtener lista de vehículos y conductores para el formulario manual
@@ -91,7 +99,7 @@ export const OperationHoursPage: React.FC = () => {
         created_by: user.id,
       });
 
-      console.log('✅ Jornada iniciada');
+        console.log('✅ Jornada iniciada');
     } catch (error: any) {
       console.error('❌ Error:', error);
       alert(`Error al iniciar jornada: ${error.message || 'Error desconocido'}`);
@@ -116,51 +124,114 @@ export const OperationHoursPage: React.FC = () => {
     }
   };
 
-  const handleManualCreate = async () => {
+  const handleManualCreate = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    
+    // Validación de campos requeridos
     if (!manualFormData.vehicle_plate || !manualFormData.driver_name) {
-      alert('Completa los campos requeridos');
+      alert('Por favor completa los campos requeridos: Placa del Vehículo y Nombre del Conductor');
+      return;
+    }
+
+    // Si no es compensatorio, validar hora de entrada
+    if (!manualFormData.is_compensatory && !manualFormData.check_in_time) {
+      alert('Por favor ingresa la Hora de Entrada');
+      return;
+    }
+
+    // Si es compensatorio, validar fecha
+    if (manualFormData.is_compensatory && !manualFormData.check_in_time) {
+      alert('Por favor ingresa la Fecha del Día Compensatorio');
       return;
     }
 
     try {
+      // Construir payload con campos requeridos del schema base
       const payload: any = {
         vehicle_plate: manualFormData.vehicle_plate,
         driver_name: manualFormData.driver_name,
-        task_description: manualFormData.is_compensatory ? 'Día Compensatorio' : 'Registro manual por admin',
+        task_description: manualFormData.is_compensatory 
+          ? 'Día Compensatorio' 
+          : (manualFormData.notes || 'Registro manual por admin'),
         activity_type: 'regular',
-        department: 'transport',
+        // Campos de ubicación GPS (requeridos NOT NULL en el schema)
+        location_latitude: latitude || 4.6097, // Bogotá por defecto si no hay GPS
+        location_longitude: longitude || -74.0817, // Bogotá por defecto si no hay GPS
         created_by: user?.id,
-        created_by_admin: true,
-        is_compensatory: manualFormData.is_compensatory,
-        notes: manualFormData.notes,
       };
+
+      // Nota: Los siguientes campos pueden no existir si las migraciones no se ejecutaron:
+      // - department: se agrega en logistics_setup.sql
+      // - is_compensatory, notes: se agregan en add_compensatory_field.sql
+      // Si estos campos no existen, el insert fallará con un error específico
+      // que será manejado en el catch más abajo
 
       if (manualFormData.is_compensatory) {
         // Compensatorio: solo fecha, sin horas
-        payload.check_in_time = `${manualFormData.check_in_time}T00:00:00`;
-        payload.check_out_time = null;
-        payload.status = 'compensatory';
+        // Convertir fecha a formato ISO con hora 00:00:00
+        const dateStr = manualFormData.check_in_time;
+        // Asegurar formato ISO completo: YYYY-MM-DDTHH:mm:ss
+        payload.check_in_time = dateStr.includes('T') 
+          ? dateStr.split('T')[0] + 'T00:00:00'
+          : `${dateStr}T00:00:00`;
+        // Para días compensatorios, usar el mismo tiempo de entrada y salida
+        // (0 horas trabajadas) y marcarlo como completado
+        payload.check_out_time = payload.check_in_time;
+        payload.status = 'completed'; // Status válido según schema: 'in_progress', 'completed', 'cancelled'
       } else {
         // Normal: con horas de entrada y salida
-        payload.check_in_time = manualFormData.check_in_time;
-        payload.check_out_time = manualFormData.check_out_time || null;
-        payload.status = manualFormData.check_out_time ? 'completed' : 'in_progress';
+        // Convertir datetime-local (YYYY-MM-DDTHH:mm) a ISO string completo (YYYY-MM-DDTHH:mm:ss)
+        let checkInISO = manualFormData.check_in_time;
+        if (checkInISO && !checkInISO.includes(':')) {
+          // Si solo tiene fecha, agregar hora 00:00:00
+          checkInISO = `${checkInISO}T00:00:00`;
+        } else if (checkInISO && checkInISO.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+          // Si tiene formato YYYY-MM-DDTHH:mm, agregar segundos
+          checkInISO = `${checkInISO}:00`;
+        }
+        payload.check_in_time = checkInISO;
+        
+        if (manualFormData.check_out_time) {
+          let checkOutISO = manualFormData.check_out_time;
+          if (checkOutISO && checkOutISO.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+            // Si tiene formato YYYY-MM-DDTHH:mm, agregar segundos
+            checkOutISO = `${checkOutISO}:00`;
+          }
+          payload.check_out_time = checkOutISO;
+          payload.status = 'completed';
+        } else {
+          payload.check_out_time = null;
+          payload.status = 'in_progress';
+        }
       }
 
-      const { data, error } = await supabase
-        .from('operation_hours')
-        .insert([payload])
-        .select();
+      console.log('📝 Creando registro manual con payload:', payload);
 
-      if (error) {
-        console.error('Error:', error);
-        alert(`Error: ${error.message}`);
+      // Usar interceptor para manejar auto-refresh de sesión
+      const result = await executeSupabaseQuery(() =>
+        supabase
+          .from('operation_hours')
+          .insert([payload])
+          .select()
+      );
+
+      if (result.error) {
+        console.error('❌ Error al crear registro:', result.error);
+        alert(`Error al crear registro: ${result.error.message || 'Error desconocido'}`);
         return;
       }
 
-      console.log('✅ Registro manual creado:', data);
+      console.log('✅ Registro manual creado exitosamente:', result.data);
+      
+      // Invalidar queries para refrescar la lista
+      queryClient.invalidateQueries({ 
+        queryKey: ['operation_hours'],
+        refetchType: 'active',
+      });
+      
       alert('✅ Registro creado exitosamente');
       
+      // Cerrar modal y limpiar formulario
       setShowManualForm(false);
       setManualFormData({
         vehicle_plate: '',
@@ -171,8 +242,8 @@ export const OperationHoursPage: React.FC = () => {
         notes: '',
       });
     } catch (error: any) {
-      console.error('Error:', error);
-      alert(`Error: ${error.message}`);
+      console.error('❌ Excepción al crear registro:', error);
+      alert(`Error: ${error.message || 'Error desconocido al crear el registro'}`);
     }
   };
 
@@ -257,13 +328,20 @@ export const OperationHoursPage: React.FC = () => {
                 </div>
               </CardHeader>
               <CardBody>
-                <div className="space-y-4">
+                <form onSubmit={handleManualCreate} className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={manualFormData.is_compensatory}
-                        onChange={(e) => setManualFormData({ ...manualFormData, is_compensatory: e.target.checked })}
+                        onChange={(e) => {
+                          setManualFormData({ 
+                            ...manualFormData, 
+                            is_compensatory: e.target.checked,
+                            // Limpiar check_out_time cuando se marca como compensatorio
+                            check_out_time: e.target.checked ? '' : manualFormData.check_out_time
+                          });
+                        }}
                         className="w-4 h-4"
                       />
                       <span className="text-sm font-medium text-blue-900">
@@ -349,14 +427,28 @@ export const OperationHoursPage: React.FC = () => {
                   />
 
                   <div className="flex justify-end gap-3 pt-4 border-t">
-                    <Button variant="secondary" onClick={() => setShowManualForm(false)}>
+                    <Button 
+                      type="button"
+                      variant="secondary" 
+                      onClick={() => {
+                        setShowManualForm(false);
+                        setManualFormData({
+                          vehicle_plate: '',
+                          driver_name: '',
+                          check_in_time: '',
+                          check_out_time: '',
+                          is_compensatory: false,
+                          notes: '',
+                        });
+                      }}
+                    >
                       Cancelar
                     </Button>
-                    <Button onClick={handleManualCreate}>
+                    <Button type="submit">
                       Crear Registro
                     </Button>
                   </div>
-                </div>
+                </form>
               </CardBody>
             </Card>
           </div>
@@ -420,14 +512,44 @@ export const OperationHoursPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Registro de Horas</h2>
               {isLoading && <span className="text-sm text-gray-500">Cargando...</span>}
+              {isError && (
+                <span className="text-sm text-red-500">
+                  Error al cargar datos
+                </span>
+              )}
             </div>
           </CardHeader>
           <CardBody className="p-0">
-            <DataTable
-              data={operationHours}
-              columns={columns}
-              emptyMessage="No hay horas registradas para este vehículo"
-            />
+            {isError ? (
+              <div className="p-8 text-center">
+                <p className="text-red-600 mb-2">
+                  ❌ Error al cargar las horas de operación
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  {operationHoursError instanceof Error 
+                    ? operationHoursError.message 
+                    : 'Error desconocido'}
+                </p>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => window.location.reload()}
+                >
+                  Recargar página
+                </Button>
+              </div>
+            ) : (
+              <DataTable
+                data={operationHours}
+                columns={columns}
+                emptyMessage={
+                  isAdmin 
+                    ? "No hay horas registradas" 
+                    : selectedEquipment 
+                      ? `No hay horas registradas para ${selectedEquipment.license_plate}`
+                      : "Selecciona un vehículo para ver sus horas registradas"
+                }
+              />
+            )}
           </CardBody>
         </Card>
       </div>

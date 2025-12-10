@@ -3,15 +3,14 @@ import { MainLayout } from '../templates/MainLayout';
 import { Card, CardHeader, CardBody } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
-import { TextArea } from '../atoms/TextArea';
 import { Badge } from '../atoms/Badge';
 import { RefreshCw, Download, Upload, Edit2, Save, X, FileSpreadsheet, MapPin } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { useOvertimeTracking, useSyncOvertimeTracking, useUpdateOvertimeTracking, OvertimeTracking } from '../hooks/useOvertimeTracking';
 import { parseGPSExcel, uploadGPSData, analyzeAndUpdateRoute, validateGPSExcel } from '../services/gpsService';
 import { GPSRouteMap } from '../components/GPSRouteMap';
+import { supabase } from '../services/supabase';
 
 export const OvertimeTrackingPage: React.FC = () => {
   useProtectedRoute(['admin']);
@@ -19,7 +18,7 @@ export const OvertimeTrackingPage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [placaFilter, setPlacaFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<{ ubicacion: string; actividad: string }>({ ubicacion: '', actividad: '' });
   const [uploadingGPS, setUploadingGPS] = useState<string | null>(null);
@@ -77,7 +76,7 @@ export const OvertimeTrackingPage: React.FC = () => {
       const records = await parseGPSExcel(file);
       console.log(`✅ ${records.length} registros GPS parseados`);
       
-      // VALIDAR que el Excel coincida con el registro
+      // VALIDAR que el Excel coincida con el registro y obtener la placa esperada
       const validation = await validateGPSExcel(overtimeId, records);
       
       if (!validation.valid) {
@@ -88,27 +87,51 @@ export const OvertimeTrackingPage: React.FC = () => {
       
       console.log('✅ Validación exitosa:', validation.message);
       
-      // Subir a Supabase
-      await uploadGPSData(overtimeId, records);
-      console.log('✅ Datos GPS subidos');
+      // Obtener la placa esperada del registro de overtime
+      const { data: overtimeRecord } = await supabase
+        .from('overtime_tracking')
+        .select('placa')
+        .eq('id', overtimeId)
+        .single();
       
-      // Analizar y actualizar
-      const analysis = await analyzeAndUpdateRoute(overtimeId);
+      const expectedPlaca = overtimeRecord?.placa?.toUpperCase().trim();
+      
+      // FILTRAR registros solo de la placa correcta
+      const recordsFiltrados = expectedPlaca 
+        ? records.filter(r => r.movil.toUpperCase().trim() === expectedPlaca)
+        : records;
+      
+      console.log(`📊 Usando ${recordsFiltrados.length} registros de la placa ${expectedPlaca} (de ${records.length} totales)`);
+      
+      if (recordsFiltrados.length === 0) {
+        alert(`❌ No se encontraron registros de la placa ${expectedPlaca} en el Excel`);
+        setUploadingGPS(null);
+        return;
+      }
+      
+      // ANALIZAR PRIMERO en memoria (más rápido) - solo con registros filtrados
+      console.log('🔍 Analizando ruta en memoria...');
+      const analysis = await analyzeAndUpdateRoute(overtimeId, recordsFiltrados);
       console.log('✅ Ruta analizada:', analysis);
       
+      // LUEGO subir a Supabase (puede tardar, pero ya tenemos los resultados) - solo registros filtrados
+      console.log('📤 Subiendo datos GPS a la base de datos (esto puede tardar)...');
+      await uploadGPSData(overtimeId, recordsFiltrados);
+      console.log('✅ Datos GPS subidos');
+      
       alert(`✅ GPS procesado correctamente\n\n` +
-            `Placa: ${records[0].movil}\n` +
+            `Placa: ${expectedPlaca || recordsFiltrados[0]?.movil}\n` +
             `Inicio: ${analysis.entrada ? new Date(analysis.entrada).toLocaleString('es-CO') : 'N/A'}\n` +
             `Ubicación: ${analysis.ubicacion_entrada || 'N/A'}\n\n` +
             `Fin: ${analysis.salida ? new Date(analysis.salida).toLocaleString('es-CO') : 'N/A'}\n` +
             `Ubicación: ${analysis.ubicacion_salida || 'N/A'}\n\n` +
-            `Total registros: ${analysis.total_records}`);
+            `Total registros procesados: ${recordsFiltrados.length} de ${records.length} totales`);
       
       // Refrescar datos
       window.location.reload();
     } catch (error: any) {
       console.error('❌ Error procesando GPS:', error);
-      alert(`Error procesando GPS: ${error.message}`);
+      alert(`Error procesando GPS: ${error.message || 'Error desconocido'}\n\nVerifica la consola para más detalles.`);
     } finally {
       setUploadingGPS(null);
     }
@@ -274,15 +297,34 @@ export const OvertimeTrackingPage: React.FC = () => {
                           <td className="px-2 py-2 text-gray-700">{formatTime(record.hora_salida)}</td>
                           <td className="px-2 py-2 text-center text-blue-700 bg-blue-50">{formatTime(record.validacion_entrada)}</td>
                           <td className="px-2 py-2 text-center text-blue-700 bg-blue-50">{formatTime(record.validacion_salida)}</td>
-                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono">{formatDecimal(record.he_diurna_decimal)}</td>
-                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono">{formatDecimal(record.desayuno_almuerzo_decimal)}</td>
-                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono">{formatDecimal(record.horario_compensado_decimal)}</td>
-                          <td className="px-2 py-2 text-right text-green-700 bg-green-50 font-mono font-semibold">{formatDecimal(record.total_he_diurna_decimal)}</td>
-                          <td className="px-2 py-2 text-right text-purple-700 bg-purple-50 font-mono font-semibold">{formatDecimal(record.he_nocturna_decimal)}</td>
-                          <td className="px-2 py-2 text-right text-red-700 bg-red-50 font-mono font-semibold">{formatDecimal(record.dom_fest_decimal)}</td>
-                          <td className="px-2 py-2 text-right text-indigo-700 bg-indigo-50 font-mono font-bold text-sm">{formatDecimal(record.horas_finales_decimal)}</td>
-                          <td className="px-2 py-2 text-gray-600">{formatTime(record.hora_entrada_gps)}</td>
-                          <td className="px-2 py-2 text-gray-600">{formatTime(record.hora_salida_gps)}</td>
+                          {/* Columnas calculadas usando GPS Entrada y GPS Salida (si están disponibles) */}
+                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)}` : 'Calculado con Hora Entrada manual'}>
+                            {formatDecimal(record.he_diurna_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)}` : 'Calculado con Hora Entrada manual'}>
+                            {formatDecimal(record.desayuno_almuerzo_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                            {formatDecimal(record.horario_compensado_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-right text-green-700 bg-green-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                            {formatDecimal(record.total_he_diurna_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-right text-purple-700 bg-purple-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                            {formatDecimal(record.he_nocturna_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-right text-red-700 bg-red-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                            {formatDecimal(record.dom_fest_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-right text-indigo-700 bg-indigo-50 font-mono font-bold text-sm" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                            {formatDecimal(record.horas_finales_decimal)}
+                          </td>
+                          <td className="px-2 py-2 text-gray-600 font-semibold" title={record.hora_entrada_gps ? 'Usado para calcular las horas extras' : 'No disponible - se usan horas manuales'}>
+                            {formatTime(record.hora_entrada_gps) || '-'}
+                          </td>
+                          <td className="px-2 py-2 text-gray-600 font-semibold" title={record.hora_salida_gps ? 'Usado para calcular las horas extras' : 'No disponible - se usan horas manuales'}>
+                            {formatTime(record.hora_salida_gps) || '-'}
+                          </td>
                           <td className="px-2 py-2 max-w-xs">
                             {isEditing ? (
                               <Input

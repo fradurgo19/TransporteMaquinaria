@@ -6,9 +6,14 @@ import { useAuth } from '../context/AuthContext';
  * - logistics: Logística y entregas
  */
 export const useDepartment = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
-  const department = (user?.role === 'logistics' || user?.role === 'admin_logistics') ? 'logistics' : 'transport';
+  // Si el usuario está cargando o no hay usuario, retornar 'transport' por defecto
+  // pero marcar como no listo
+  const department = user 
+    ? ((user.role === 'logistics' || user.role === 'admin_logistics') ? 'logistics' : 'transport')
+    : 'transport';
+  
   const isLogistics = department === 'logistics';
   const isTransport = department === 'transport';
   const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
@@ -17,11 +22,12 @@ export const useDepartment = () => {
     (isLogistics && user?.role === 'admin_logistics');
 
   return {
-    department,
+    department: department as 'transport' | 'logistics',
     isLogistics,
     isTransport,
     isAdmin,
     isDepartmentAdmin,
+    isLoading: authLoading, // Exponer si está cargando
   };
 };
 

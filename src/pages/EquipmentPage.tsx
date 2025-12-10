@@ -630,15 +630,34 @@ export const EquipmentPage: React.FC = () => {
           <CardBody className="overflow-x-auto">
             {isLoading ? (
               <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
                 <p className="text-gray-500">Cargando equipos...</p>
               </div>
             ) : equipmentError ? (
               <div className="text-center py-8">
-                <p className="text-red-500">Error al cargar equipos. Por favor, intenta de nuevo.</p>
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+                <p className="text-red-500 font-semibold mb-2">Error al cargar equipos</p>
+                <p className="text-sm text-gray-600 mb-4">
+                  {equipmentError instanceof Error ? equipmentError.message : 'Error desconocido'}
+                </p>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => window.location.reload()}
+                >
+                  Recargar página
+                </Button>
               </div>
             ) : equipment.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">No hay equipos registrados</p>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setShowAddModal(true)}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar primer equipo
+                </Button>
               </div>
             ) : (
               <table className="min-w-full divide-y divide-gray-200">

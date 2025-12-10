@@ -73,9 +73,13 @@ export interface FuelLog {
   date: string;
   gallons: number;
   cost: number;
+  pricePerGallon?: number; // Precio por galón (calculado o extraído del OCR)
   startingOdometer: number;
   endingOdometer: number;
+  distanceTraveled?: number; // Kms recorridos (calculado: ending - starting)
+  fuelEfficiency?: number; // Km/Galon (calculado: distanceTraveled / gallons)
   receiptPhoto?: string;
+  receiptPhotos?: string[]; // Múltiples fotos de tirillas
   department?: Department;
   createdAt: string;
 }

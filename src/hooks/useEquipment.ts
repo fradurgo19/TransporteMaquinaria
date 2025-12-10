@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, EQUIPMENT_LIST_FIELDS, EQUIPMENT_FULL_FIELDS, QUERY_LIMITS } from '../services/supabase';
 import { useDepartment } from './useDepartment';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 
 interface Equipment {
   id: string;
@@ -33,11 +34,26 @@ interface EquipmentQueryParams {
 export const useEquipment = (params: EquipmentQueryParams = {}) => {
   const { page = 1, limit = QUERY_LIMITS.EQUIPMENT, status, search, useFullFields = false } = params;
   const fields = useFullFields ? EQUIPMENT_FULL_FIELDS : EQUIPMENT_LIST_FIELDS;
-  const { department } = useDepartment();
+  const { department, isLoading: departmentLoading } = useDepartment();
   
   return useQuery({
     queryKey: ['equipment', department, page, limit, status, search, useFullFields],
     queryFn: async () => {
+      // Verificar sesión antes de hacer la query
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('❌ No hay sesión activa para cargar equipos');
+        throw new Error('No hay sesión activa');
+      }
+
+      if (!department) {
+        console.error('❌ Departamento no disponible para cargar equipos');
+        throw new Error('Departamento no disponible');
+      }
+
+      console.log(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
+
+      // Construir query
       let query = supabase
         .from('equipment')
         .select(fields, { count: 'exact' })
@@ -58,25 +74,41 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
       const to = from + limit - 1;
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
+      // Ejecutar con interceptor (maneja auto-refresh automáticamente)
+      const result = await executeSupabaseQuery(() => query);
 
-      if (error) {
-        console.error('Error fetching equipment:', error);
-        throw error;
+      if (result.error) {
+        console.error('Error fetching equipment:', result.error);
+        throw result.error;
       }
 
+      // Supabase devuelve { data: T[], count: number, error: any }
+      // El interceptor devuelve { data: { data: T[], count: number }, error: any }
+      const responseData = result.data as any;
+      const equipmentList = (responseData?.data || responseData || []) as Equipment[];
+      const totalCount = responseData?.count || 0;
+
       return {
-        data: data as Equipment[],
-        total: count || 0,
+        data: equipmentList,
+        total: totalCount,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages: Math.ceil(totalCount / limit),
       };
     },
-    staleTime: 30 * 1000, // 30 segundos
-    gcTime: 2 * 60 * 1000,
-    refetchInterval: 30 * 1000, // Polling cada 30 segundos
-    refetchIntervalInBackground: false,
+    enabled: !departmentLoading && !!department, // Solo ejecutar si department está listo
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false, // No refrescar en focus (ya está desactivado globalmente)
+    refetchOnMount: true, // Refrescar al montar si está stale
+    retry: (failureCount, error: any) => {
+      // No reintentar si es error de autenticación
+      if (error?.code === 'PGRST301' || error?.message?.includes('JWT') || error?.message?.includes('token')) {
+        return false;
+      }
+      // Reintentar hasta 2 veces para otros errores
+      return failureCount < 2;
+    },
   });
 };
 

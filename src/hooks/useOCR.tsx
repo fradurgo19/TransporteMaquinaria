@@ -5,6 +5,7 @@ interface OCRResult {
   text: string;
   gallons: string;
   cost: string;
+  pricePerGallon: string; // Precio por galón extraído de la tirilla
   date: string;
 }
 
@@ -45,6 +46,14 @@ export const useOCR = () => {
         /(\d{3,}[.,]?\d*)/,
       ];
 
+      // Patrones para extraer precio por galón
+      const pricePerGallonPatterns = [
+        /precio[:\s]*\$?\s*(\d+[.,]\d+)\s*\/?\s*gal/i,
+        /(\d+[.,]\d+)\s*\/?\s*gal/i,
+        /gal[:\s]*\$?\s*(\d+[.,]\d+)/i,
+        /valor\s*unitario[:\s]*\$?\s*(\d+[.,]\d+)/i,
+      ];
+
       const datePatterns = [
         /(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/,
         /(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/,
@@ -73,6 +82,25 @@ export const useOCR = () => {
         }
       }
 
+      // Extraer precio por galón
+      let pricePerGallon = '';
+      for (const pattern of pricePerGallonPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          pricePerGallon = match[1].replace(',', '.');
+          break;
+        }
+      }
+
+      // Si no se encontró precio por galón directamente, calcularlo si tenemos costo y galones
+      if (!pricePerGallon && gallons && cost) {
+        const gallonsNum = parseFloat(gallons.replace(',', '.'));
+        const costNum = parseFloat(cost.replace(',', ''));
+        if (gallonsNum > 0 && costNum > 0) {
+          pricePerGallon = (costNum / gallonsNum).toFixed(2);
+        }
+      }
+
       // Extraer fecha
       let date = '';
       for (const pattern of datePatterns) {
@@ -87,6 +115,7 @@ export const useOCR = () => {
         text,
         gallons,
         cost,
+        pricePerGallon,
         date,
       };
     } catch (error) {

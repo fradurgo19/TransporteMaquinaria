@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 
 interface OvertimeTracking {
   id: string;
@@ -19,6 +20,8 @@ interface OvertimeTracking {
   dia_semana: string | null;
   tipo_dia: string | null;
   mes: string | null;
+  validacion_entrada: string | null;
+  validacion_salida: string | null;
   he_diurna_decimal: number;
   desayuno_almuerzo_decimal: number;
   horario_compensado_decimal: number;
@@ -26,6 +29,7 @@ interface OvertimeTracking {
   he_nocturna_decimal: number;
   dom_fest_decimal: number;
   horas_finales_decimal: number;
+  gps_data_uploaded: boolean | null;
   created_at: string;
 }
 
@@ -46,6 +50,12 @@ export const useOvertimeTracking = (params: OvertimeQueryParams = {}) => {
   return useQuery({
     queryKey: ['overtime_tracking', page, limit, startDate, endDate, placa],
     queryFn: async () => {
+      // Verificar sesión antes de hacer la query
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
       let query = supabase
         .from('overtime_tracking')
         .select('*', { count: 'exact' })
@@ -68,23 +78,31 @@ export const useOvertimeTracking = (params: OvertimeQueryParams = {}) => {
       const to = from + limit - 1;
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
+      // Ejecutar con interceptor (maneja auto-refresh automáticamente)
+      const result = await executeSupabaseQuery(() => query);
 
-      if (error) {
-        console.error('Error fetching overtime tracking:', error);
-        throw error;
+      if (result.error) {
+        console.error('Error fetching overtime tracking:', result.error);
+        throw result.error;
       }
 
+      // Extraer datos de la respuesta
+      const responseData = result.data as any;
+      const data = (responseData?.data || responseData || []) as OvertimeTracking[];
+      const count = responseData?.count || 0;
+
       return {
-        data: data as OvertimeTracking[],
-        total: count || 0,
+        data,
+        total: count,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages: Math.ceil(count / limit),
       };
     },
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 segundos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 };
 

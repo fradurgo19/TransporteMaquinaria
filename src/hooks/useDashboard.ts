@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase, QUERY_LIMITS } from '../services/supabase';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 
 interface DashboardMetrics {
   totalKilometers: number;
@@ -24,34 +25,47 @@ export const useDashboardMetrics = () => {
   return useQuery({
     queryKey: ['dashboard', 'metrics'],
     queryFn: async (): Promise<DashboardMetrics> => {
-      // Ejecutar consultas en paralelo
+      // Ejecutar consultas en paralelo con interceptor
       const [equipmentResult, fuelResult, alertsResult] = await Promise.all([
         // Equipos activos
-        supabase
-          .from('equipment')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active'),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('equipment')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'active')
+        ),
         
         // Consumo total de combustible (últimos 30 días)
-        supabase
-          .from('fuel_logs')
-          .select('gallons, cost')
-          .gte('fuel_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('fuel_logs')
+            .select('gallons, cost')
+            .gte('fuel_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        ),
         
         // Documentos próximos a vencer (simplificado - obtener todos y filtrar en memoria)
-        supabase
-          .from('equipment')
-          .select('id, technical_inspection_expiration, soat_expiration, insurance_policy_expiration, driver_license_expiration'),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('equipment')
+            .select('id, technical_inspection_expiration, soat_expiration, insurance_policy_expiration, driver_license_expiration')
+        ),
       ]);
 
-      const activeVehicles = equipmentResult.count || 0;
-      const fuelConsumption = fuelResult.data?.reduce((sum, log: any) => sum + (log.gallons || 0), 0) || 0;
+      // Extraer datos de las respuestas
+      const equipmentResponse = equipmentResult.data as any;
+      const fuelResponse = fuelResult.data as any;
+      const alertsResponse = alertsResult.data as any;
+
+      const activeVehicles = equipmentResponse?.count || 0;
+      const fuelData = fuelResponse?.data || fuelResponse || [];
+      const fuelConsumption = fuelData.reduce((sum: number, log: any) => sum + (log.gallons || 0), 0) || 0;
       
       // Contar documentos próximos a vencer (próximos 30 días)
       const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       let expiringDocuments = 0;
-      if (alertsResult.data) {
-        alertsResult.data.forEach((eq: any) => {
+      const equipmentData = alertsResponse?.data || alertsResponse || [];
+      if (equipmentData.length > 0) {
+        equipmentData.forEach((eq: any) => {
           const fields = [
             eq.technical_inspection_expiration,
             eq.soat_expiration,
@@ -94,18 +108,21 @@ export const useDashboardAlerts = () => {
       const now = new Date();
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      // Obtener equipos con documentos próximos a vencer
-      const { data: equipment, error } = await supabase
-        .from('equipment')
-        .select('id, license_plate, technical_inspection_expiration, soat_expiration, insurance_policy_expiration, driver_license_expiration')
-        .order('license_plate', { ascending: true })
-        .limit(QUERY_LIMITS.DASHBOARD_ALERTS * 2); // Obtener más para filtrar
+      // Obtener equipos con documentos próximos a vencer (con interceptor)
+      const result = await executeSupabaseQuery(() =>
+        supabase
+          .from('equipment')
+          .select('id, license_plate, technical_inspection_expiration, soat_expiration, insurance_policy_expiration, driver_license_expiration')
+          .order('license_plate', { ascending: true })
+          .limit(QUERY_LIMITS.DASHBOARD_ALERTS * 2) // Obtener más para filtrar
+      );
 
-      if (error) {
-        console.error('Error fetching alerts:', error);
-        throw error;
+      if (result.error) {
+        console.error('Error fetching alerts:', result.error);
+        throw result.error;
       }
 
+      const equipment = result.data;
       if (!equipment) return [];
 
       const alerts: Alert[] = [];
