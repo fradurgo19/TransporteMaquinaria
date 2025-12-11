@@ -1,0 +1,34 @@
+# Configuración de finales de línea para el proyecto
+# Normalizar todos los archivos de texto a LF en el repositorio
+* text=auto eol=lf
+
+# Archivos específicos que deben mantener CRLF (scripts de Windows)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Archivos binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.exe binary
+*.dll binary
+
+# Archivos de código fuente (normalizar a LF)
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
