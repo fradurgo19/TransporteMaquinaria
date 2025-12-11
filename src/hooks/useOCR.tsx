@@ -36,36 +36,57 @@ export const useOCR = () => {
       console.log('📝 Texto extraído:', text);
 
       // Patrones mejorados para extraer volumen (puede estar en litros o galones)
+      // Múltiples formatos: "Volumen:", "CANT:", "Cantidad:", etc.
       const volumePatterns = [
-        // Formato colombiano: "Volumen: 15.841" o "Volumen 15.841"
+        // Formato: "Volumen: 15.841" o "Volumen 15.841" (PRIORITARIO)
+        /volumen[:\s]+(\d+[.,]\d+)/i,
         /volumen[:\s]*(\d+[.,]\d+)/i,
+        /vol[:\s]+(\d+[.,]\d+)/i,
         /vol[:\s]*(\d+[.,]\d+)/i,
-        // Formato con galones
+        // Formato: "CANT: 15.841" o "CANT 15.841" o "Cantidad: 15.841"
+        /cant[:\s]+(\d+[.,]\d+)/i,
+        /cant[:\s]*(\d+[.,]\d+)/i,
+        /cantidad[:\s]+(\d+[.,]\d+)/i,
+        /cantidad[:\s]*(\d+[.,]\d+)/i,
+        // Formato con galones explícitos
         /(\d+[.,]\d+)\s*gal/i,
         /galones?[:\s]*(\d+[.,]\d+)/i,
         /gal[:\s]*(\d+[.,]\d+)/i,
-        // Formato con litros
+        // Formato con litros explícitos
         /(\d+[.,]\d+)\s*l/i,
         /litros?[:\s]*(\d+[.,]\d+)/i,
         /l[:\s]*(\d+[.,]\d+)/i,
+        // Formato genérico: número decimal después de "CANT" o "VOLUMEN"
+        /(?:cant|volumen|vol)[:\s]*(\d+[.,]\d+)/i,
       ];
 
-      // Patrones mejorados para extraer costo total
+      // Patrones mejorados para extraer costo total (VALOR TANQUEO)
+      // Múltiples formatos: "VALOR:", "TOTAL:", "VALOR TOTAL:", etc.
       const costPatterns = [
-        // Formato colombiano: "TOTAL: $177261" o "TOTAL $177261"
-        /total[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /total[:\s]*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        // Formato general con símbolo de peso
+        // Formato: "VALOR: $177261" o "VALOR $177261" (PRIORITARIO)
+        /valor[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /valor[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        // Formato: "TOTAL: $177261" o "TOTAL $177261" (PRIORITARIO)
+        /total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /total[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        // Formato: "VALOR TOTAL: $177261" o "VALOR TOTAL $177261"
+        /valor\s+total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /valor\s+total[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        // Formato: "$177261" después de "VALOR" o "TOTAL"
+        /(?:valor|total)[:\s]*.*?\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        // Formato general con símbolo de peso (solo si no se encontró VALOR/TOTAL)
         /\$\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/,
         // Formato con COP
         /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*cop/i,
-        // Números grandes (último recurso)
-        /(\d{4,}[.,]?\d*)/,
+        // Números grandes (último recurso, solo si es razonable)
+        /(\d{5,}[.,]?\d*)/,
       ];
 
       // Patrones mejorados para extraer precio unitario (por litro o galón)
+      // Formato Gigante: "Precio: $11190" (a la derecha del campo)
       const pricePerUnitPatterns = [
-        // Formato colombiano: "Precio: $11190" o "Precio $11190"
+        // Formato colombiano: "Precio: $11190" o "Precio $11190" (PRIORITARIO)
+        /precio[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
         /precio[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
         /precio\s*unitario[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
         /valor\s*unitario[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
@@ -114,17 +135,42 @@ export const useOCR = () => {
       ];
 
       // Extraer volumen (puede estar en litros o galones)
+      // Múltiples formatos: "Volumen:", "CANT:", "Cantidad:", etc.
+      // Generalmente en litros en facturas colombianas y debe convertirse a galones
       let volume = '';
       let isLiters = false;
+      
       for (const pattern of volumePatterns) {
         const match = text.match(pattern);
         if (match) {
           volume = match[1].replace(',', '.');
-          // Detectar si es litros
+          // Detectar si es litros o galones
           const matchText = match[0].toLowerCase();
-          if (matchText.includes('l') && !matchText.includes('gal')) {
-            isLiters = true;
+          if (matchText.includes('gal')) {
+            isLiters = false; // Es galones explícitamente
+          } else if (matchText.includes('l') && !matchText.includes('gal')) {
+            isLiters = true; // Es litros explícitamente
+          } else {
+            // Si no especifica unidad, verificar el contexto
+            // Si dice "CANT" o "Volumen" sin unidad, generalmente es litros en Colombia
+            // Buscar en el texto cercano si hay indicación de litros
+            const contextText = text.toLowerCase();
+            const volumeIndex = contextText.indexOf(match[0].toLowerCase());
+            const contextAround = contextText.substring(
+              Math.max(0, volumeIndex - 50),
+              Math.min(contextText.length, volumeIndex + 50)
+            );
+            
+            if (contextAround.includes('litro') || contextAround.includes(' l ') || contextAround.includes('lts')) {
+              isLiters = true;
+            } else if (contextAround.includes('galon') || contextAround.includes(' gal ')) {
+              isLiters = false;
+            } else {
+              // Por defecto, asumir litros (formato común en facturas colombianas)
+              isLiters = true;
+            }
           }
+          console.log('📊 Volumen extraído:', volume, isLiters ? 'litros' : 'galones', `(patrón: ${match[0]})`);
           break;
         }
       }
@@ -135,14 +181,30 @@ export const useOCR = () => {
         const volumeNum = parseFloat(volume);
         if (isLiters) {
           gallons = (volumeNum / 3.78541).toFixed(3);
+          console.log(`📊 Conversión: ${volume} litros = ${gallons} galones`);
         } else {
           gallons = volume;
         }
       }
 
-      // Extraer costo total
+      // Extraer costo total (VALOR TANQUEO) - Priorizar campo "TOTAL:"
       let cost = '';
-      for (const pattern of costPatterns) {
+      let totalFound = false;
+      
+      // Primero buscar específicamente el campo "VALOR:", "TOTAL:" o "VALOR TOTAL:"
+      const totalFieldPatterns = [
+        // Formato: "VALOR: $177261" o "VALOR $177261" (PRIORITARIO)
+        /valor[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /valor[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        // Formato: "TOTAL: $177261" o "TOTAL $177261" (PRIORITARIO)
+        /total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /total[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        // Formato: "VALOR TOTAL: $177261" o "VALOR TOTAL $177261"
+        /valor\s+total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /valor\s+total[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+      ];
+      
+      for (const pattern of totalFieldPatterns) {
         const match = text.match(pattern);
         if (match) {
           let costValue = match[1].replace(/\./g, '').replace(',', '.');
@@ -154,8 +216,42 @@ export const useOCR = () => {
           // Filtrar valores razonables (más de $1,000 y menos de $10,000,000)
           if (costNum >= 1000 && costNum <= 10000000) {
             cost = costValue;
+            totalFound = true;
+            console.log('✅ Valor total encontrado en campo TOTAL:', cost);
             break;
           }
+        }
+      }
+      
+      // Si no se encontró en el campo TOTAL, buscar en otros patrones
+      if (!totalFound) {
+        for (const pattern of costPatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            let costValue = match[1].replace(/\./g, '').replace(',', '.');
+            if (!costValue.includes('.')) {
+              costValue = match[1].replace(/[.,]/g, '');
+            }
+            const costNum = parseFloat(costValue);
+            // Filtrar valores razonables (más de $1,000 y menos de $10,000,000)
+            if (costNum >= 1000 && costNum <= 10000000) {
+              cost = costValue;
+              console.log('✅ Valor total encontrado en patrón alternativo:', cost);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Si aún no se encontró el TOTAL, intentar calcular desde volumen × precio
+      // (último recurso: Volumen × Precio = Total)
+      if (!cost && volume && pricePerUnit) {
+        const volumeNum = parseFloat(volume);
+        const priceNum = parseFloat(pricePerUnit);
+        if (volumeNum > 0 && priceNum > 0) {
+          const calculatedCost = (volumeNum * priceNum).toFixed(0);
+          cost = calculatedCost;
+          console.log(`📊 Valor total calculado: ${volume} × ${pricePerUnit} = ${cost}`);
         }
       }
 
@@ -200,6 +296,18 @@ export const useOCR = () => {
         const costNum = parseFloat(cost);
         if (gallonsNum > 0 && costNum > 0) {
           pricePerGallon = (costNum / gallonsNum).toFixed(2);
+        }
+      }
+      
+      // Si aún no se encontró el TOTAL, intentar calcular desde volumen × precio
+      // (último recurso: Volumen × Precio = Total)
+      if (!cost && volume && pricePerUnit) {
+        const volumeNum = parseFloat(volume);
+        const priceNum = parseFloat(pricePerUnit);
+        if (volumeNum > 0 && priceNum > 0) {
+          const calculatedCost = (volumeNum * priceNum).toFixed(0);
+          cost = calculatedCost;
+          console.log(`📊 Valor total calculado: ${volume} × ${pricePerUnit} = ${cost}`);
         }
       }
 
