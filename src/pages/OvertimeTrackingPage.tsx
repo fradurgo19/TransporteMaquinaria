@@ -219,22 +219,36 @@ export const OvertimeTrackingPage: React.FC = () => {
               Gestión y cálculo automático de horas extras, nocturnas y festivos
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button 
               onClick={triggerMultiDayGPSUpload} 
               disabled={uploadingMultiDay}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+              className="text-white"
+              style={{ backgroundColor: '#cf1b22' }}
               title="Cargar Excel GPS con múltiples días para una o más placas. El sistema identificará automáticamente los registros correspondientes."
             >
-              <Upload className={`h-4 w-4 mr-2 ${uploadingMultiDay ? 'animate-spin' : ''}`} />
-              {uploadingMultiDay ? 'Procesando...' : 'Cargar Excel Multi-Día GPS'}
+              <Upload className={`h-3.5 w-3.5 mr-1.5 ${uploadingMultiDay ? 'animate-spin' : ''}`} />
+              {uploadingMultiDay ? 'Procesando...' : 'Cargar Excel Multi-Día'}
             </Button>
-            <Button onClick={handleSync} disabled={syncMutation.isPending}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar desde Operation Hours'}
+            <Button 
+              onClick={handleSync} 
+              disabled={syncMutation.isPending}
+              size="sm"
+              className="text-white"
+              style={{ backgroundColor: '#50504f' }}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar desde Operation'}
             </Button>
-            <Button variant="secondary" onClick={exportToExcel}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button 
+              variant="secondary" 
+              onClick={exportToExcel}
+              size="sm"
+              className="text-white"
+              style={{ backgroundColor: '#50504f' }}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
               Exportar Excel
             </Button>
           </div>

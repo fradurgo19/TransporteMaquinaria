@@ -7,18 +7,32 @@ import { supabase } from './supabase';
 
 let heartbeatInterval: NodeJS.Timeout | null = null;
 let lastRefreshTime = 0;
+let isRefreshing = false; // Lock para evitar múltiples refreshes simultáneos
 const REFRESH_INTERVAL = 5 * 60 * 1000; // Refrescar cada 5 minutos
 const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // Heartbeat cada 2 minutos
 
 /**
  * Verificar y refrescar sesión si es necesario
+ * Mejorado para manejar mejor la reconexión después de inactividad
+ * Con lock para evitar múltiples refreshes simultáneos
  */
 export const refreshSessionIfNeeded = async (): Promise<boolean> => {
+  // Si ya hay un refresh en progreso, esperar un momento y verificar sesión directamente
+  if (isRefreshing) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return !!session;
+    } catch {
+      return false;
+    }
+  }
+
   try {
+    // Verificar sesión primero (sin timeout agresivo)
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('❌ Error obteniendo sesión:', error);
+      console.warn('⚠️ Error obteniendo sesión:', error);
       return false;
     }
 
@@ -27,32 +41,68 @@ export const refreshSessionIfNeeded = async (): Promise<boolean> => {
       return false;
     }
 
-    // Verificar si el token expira pronto (en menos de 10 minutos)
+    // Verificar si el token expira pronto (en menos de 15 minutos)
     const expiresAt = session.expires_at || 0;
     const now = Math.floor(Date.now() / 1000);
     const timeUntilExpiry = expiresAt - now;
 
-    // Si el token expira en menos de 10 minutos, refrescarlo
-    if (timeUntilExpiry < 600) {
-      console.log('🔄 Token expira pronto, refrescando sesión...');
-      const { data, error: refreshError } = await supabase.auth.refreshSession();
+    // Si el token expira en menos de 15 minutos Y no se ha refrescado recientemente, refrescarlo
+    if (timeUntilExpiry < 900 && (Date.now() - lastRefreshTime) > 60000) {
+      // Activar lock
+      isRefreshing = true;
       
-      if (refreshError) {
-        console.error('❌ Error refrescando sesión:', refreshError);
-        return false;
-      }
+      try {
+        console.log('🔄 Token expira pronto, refrescando sesión...');
+        
+        // Timeout más largo para refresh (15 segundos)
+        const refreshTimeoutPromise = new Promise<boolean>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout refrescando sesión')), 15000)
+        );
 
-      if (data.session) {
-        console.log('✅ Sesión refrescada exitosamente');
-        lastRefreshTime = Date.now();
+        const refreshPromise = (async () => {
+          const { data, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError) {
+            console.warn('⚠️ Error refrescando sesión:', refreshError);
+            return false;
+          }
+
+          if (data.session) {
+            console.log('✅ Sesión refrescada exitosamente');
+            lastRefreshTime = Date.now();
+            return true;
+          }
+          
+          return false;
+        })();
+
+        try {
+          const refreshed = await Promise.race([refreshPromise, refreshTimeoutPromise]);
+          return refreshed;
+        } catch (refreshError) {
+          // Si falla el refresh pero tenemos sesión, retornar true para permitir continuar
+          console.warn('⚠️ Timeout al refrescar sesión, pero hay sesión activa - continuando');
+          return true;
+        } finally {
+          isRefreshing = false;
+        }
+      } catch (error) {
+        isRefreshing = false;
+        // Si hay error pero tenemos sesión, continuar
         return true;
       }
     }
 
     return true;
   } catch (error) {
-    console.error('❌ Excepción en refreshSessionIfNeeded:', error);
-    return false;
+    console.warn('⚠️ Excepción en refreshSessionIfNeeded:', error);
+    // Intentar verificar si hay sesión aunque haya fallado el refresh
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return !!session;
+    } catch {
+      return false;
+    }
   }
 };
 
@@ -101,16 +151,16 @@ export const stopSessionHeartbeat = () => {
 
 /**
  * Verificar sesión antes de ejecutar una operación crítica
+ * Versión simplificada - solo verifica sesión, no intenta refresh
  */
 export const ensureActiveSession = async (): Promise<boolean> => {
-  const refreshed = await refreshSessionIfNeeded();
-  
-  if (!refreshed) {
-    // Intentar una vez más
+  try {
+    // Verificar sesión directamente (rápido y simple)
     const { data: { session } } = await supabase.auth.getSession();
     return !!session;
+  } catch (error) {
+    // Si falla, asumir que no hay sesión
+    return false;
   }
-  
-  return true;
 };
 

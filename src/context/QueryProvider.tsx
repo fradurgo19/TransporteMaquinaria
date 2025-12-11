@@ -1,26 +1,33 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { startSessionHeartbeat, stopSessionHeartbeat } from '../services/sessionManager';
+import { startSessionHeartbeat, stopSessionHeartbeat, ensureActiveSession, refreshSessionIfNeeded } from '../services/sessionManager';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: true, // ACTIVADO: Refrescar cuando la ventana recupera el foco
+      refetchOnWindowFocus: false, // DESACTIVADO: Lo manejamos manualmente con verificación de sesión
       refetchOnMount: true, // Refrescar al montar si los datos están stale
       refetchOnReconnect: true, // Refrescar cuando se reconecta la red
-      retry: (failureCount) => {
+      retry: (failureCount, error: any) => {
+        // No reintentar si es error de timeout o de sesión después de varios intentos
+        if (error?.message?.includes('Timeout') || error?.message?.includes('sesión')) {
+          return failureCount < 1;
+        }
         // El interceptor maneja los errores de autenticación con auto-refresh
-        // Permitir retry para todos los errores (el interceptor se encargará de refrescar tokens)
-        // Pero limitar a 2 reintentos para evitar loops infinitos
+        // Permitir retry para otros errores, pero limitar a 2 reintentos
         return failureCount < 2;
       },
-      staleTime: 30 * 1000, // Considerar datos stale después de 30 segundos (más frecuente)
+      staleTime: 2 * 60 * 1000, // Considerar datos stale después de 2 minutos
       gcTime: 5 * 60 * 1000, // Mantener en cache por 5 minutos
       structuralSharing: true,
       networkMode: 'online',
-      // Timeout para evitar que las queries se queden colgadas
+      // Timeout global para evitar que las queries se queden colgadas indefinidamente
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      // Timeout de 30 segundos para todas las queries
+      meta: {
+        timeout: 30000,
+      },
     },
     mutations: {
       retry: (failureCount) => {
@@ -48,7 +55,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     const INVALIDATION_COOLDOWN = 10 * 1000; // 10 segundos mínimo entre invalidaciones (más frecuente)
 
     // Listener para detectar cuando la app vuelve a estar visible después de estar oculta
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       const now = Date.now();
       
       if (document.visibilityState === 'hidden') {
@@ -58,19 +65,39 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
         // Calcular cuánto tiempo estuvo oculta
         const timeHidden = now - hiddenTime;
         
-        // Solo refrescar si estuvo oculta por más de 2 minutos Y han pasado al menos 30 segundos desde la última invalidación
+        // Solo refrescar si estuvo oculta por más de 1 minuto Y han pasado al menos 10 segundos desde la última invalidación
         if (timeHidden > MIN_HIDDEN_TIME && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-          console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, refrescando datos...`);
-          lastInvalidationTime = now;
+          console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, verificando sesión y refrescando datos...`);
           
-          // Refrescar solo queries activas que están stale (más de 2 minutos)
-          queryClient.refetchQueries({ 
-            type: 'active',
-            predicate: (query) => {
-              const dataAge = now - (query.state.dataUpdatedAt || 0);
-              return dataAge > MIN_HIDDEN_TIME;
+          try {
+            // CRÍTICO: Verificar y refrescar sesión ANTES de refrescar queries
+            const sessionRefreshed = await refreshSessionIfNeeded();
+            if (!sessionRefreshed) {
+              // Intentar asegurar sesión activa
+              const hasActiveSession = await ensureActiveSession();
+              if (!hasActiveSession) {
+                console.error('❌ No se pudo verificar/refrescar sesión después de inactividad');
+                // No refrescar queries si no hay sesión activa
+                hiddenTime = null;
+                return;
+              }
             }
-          });
+            
+            console.log('✅ Sesión verificada/refrescada, refrescando queries...');
+            lastInvalidationTime = now;
+            
+            // Refrescar solo queries activas que están stale (más de 1 minuto)
+            queryClient.refetchQueries({ 
+              type: 'active',
+              predicate: (query) => {
+                const dataAge = now - (query.state.dataUpdatedAt || 0);
+                return dataAge > MIN_HIDDEN_TIME;
+              }
+            });
+          } catch (error) {
+            console.error('❌ Error al verificar sesión después de inactividad:', error);
+            // No refrescar queries si hay error
+          }
         }
         
         hiddenTime = null;
@@ -78,7 +105,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     };
 
     // Listener para cambios de sesión de Supabase (solo eventos importantes)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       // Solo loguear eventos importantes, no todos
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
         console.log('🔐 Auth state changed:', event);

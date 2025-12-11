@@ -79,7 +79,7 @@ export const useOvertimeTracking = (params: OvertimeQueryParams = {}) => {
       query = query.range(from, to);
 
       // Ejecutar con interceptor (maneja auto-refresh automáticamente)
-      const result = await executeSupabaseQuery(() => query);
+      const result = await executeSupabaseQuery(async () => await query);
 
       if (result.error) {
         console.error('Error fetching overtime tracking:', result.error);

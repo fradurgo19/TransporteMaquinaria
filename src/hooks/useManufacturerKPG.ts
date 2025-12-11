@@ -32,8 +32,8 @@ export const useManufacturerKPG = () => {
   return useQuery({
     queryKey: ['manufacturer-kpg'],
     queryFn: async (): Promise<ManufacturerKPG[]> => {
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('manufacturer_kpg')
           .select('*')
           .order('manufacturer', { ascending: true })
@@ -46,7 +46,7 @@ export const useManufacturerKPG = () => {
         throw result.error;
       }
 
-      return result.data || [];
+      return (Array.isArray(result.data) ? result.data : []) as ManufacturerKPG[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
@@ -75,14 +75,14 @@ export const useManufacturerKPGSearch = (criteria: {
         query = query.ilike('manufacturer', `%${criteria.manufacturer}%`);
       }
 
-      const result = await executeSupabaseQuery(() => query.order('kpg', { ascending: false }));
+      const result = await executeSupabaseQuery(async () => await query.order('kpg', { ascending: false }));
 
       if (result.error) {
         console.error('Error searching manufacturer KPG:', result.error);
         throw result.error;
       }
 
-      return result.data || [];
+      return (Array.isArray(result.data) ? result.data : []) as ManufacturerKPG[];
     },
     enabled: !!criteria.brand || !!criteria.vehicle_type || !!criteria.manufacturer,
     staleTime: 5 * 60 * 1000,
@@ -97,8 +97,8 @@ export const useManufacturerKPGMutation = () => {
 
   const create = useMutation({
     mutationFn: async (data: ManufacturerKPGForm): Promise<ManufacturerKPG> => {
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('manufacturer_kpg')
           .insert([data])
           .select()
@@ -110,7 +110,7 @@ export const useManufacturerKPGMutation = () => {
         throw result.error;
       }
 
-      return result.data;
+      return result.data as ManufacturerKPG;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manufacturer-kpg'] });
@@ -119,8 +119,8 @@ export const useManufacturerKPGMutation = () => {
 
   const update = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ManufacturerKPGForm> }): Promise<ManufacturerKPG> => {
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('manufacturer_kpg')
           .update(data)
           .eq('id', id)
@@ -133,7 +133,7 @@ export const useManufacturerKPGMutation = () => {
         throw result.error;
       }
 
-      return result.data;
+      return result.data as ManufacturerKPG;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manufacturer-kpg'] });
@@ -142,8 +142,8 @@ export const useManufacturerKPGMutation = () => {
 
   const remove = useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('manufacturer_kpg')
           .delete()
           .eq('id', id)
@@ -184,24 +184,29 @@ export const getManufacturerKPGForEquipment = async (
     }
 
     // Buscar el que más coincida: primero con año exacto, luego sin año
-    const result = await executeSupabaseQuery(() => query.order('year', { ascending: false, nullsLast: true }));
+    const result = await executeSupabaseQuery(async () => await query.order('year', { ascending: false }));
 
-    if (result.error || !result.data || result.data.length === 0) {
+    if (result.error || !result.data) {
+      return null;
+    }
+
+    const dataArray = Array.isArray(result.data) ? result.data : [];
+    if (dataArray.length === 0) {
       return null;
     }
 
     // Si hay año, buscar coincidencia exacta primero
     if (year) {
-      const exactMatch = result.data.find((kpg) => kpg.year === year);
-      if (exactMatch) return exactMatch;
+      const exactMatch = dataArray.find((kpg: any) => kpg.year === year);
+      if (exactMatch) return exactMatch as ManufacturerKPG;
     }
 
     // Si no hay año o no hay coincidencia exacta, buscar sin año (NULL)
-    const noYearMatch = result.data.find((kpg) => kpg.year === null);
-    if (noYearMatch) return noYearMatch;
+    const noYearMatch = dataArray.find((kpg: any) => kpg.year === null);
+    if (noYearMatch) return noYearMatch as ManufacturerKPG;
 
     // Si no hay coincidencia sin año, devolver el primero (puede ser otro año)
-    return result.data[0];
+    return dataArray[0] as ManufacturerKPG;
   } catch (error) {
     console.error('Error getting manufacturer KPG for equipment:', error);
     return null;

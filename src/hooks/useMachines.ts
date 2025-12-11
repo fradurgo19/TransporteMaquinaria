@@ -47,8 +47,8 @@ export const useMachines = () => {
 
       console.log('📋 Cargando máquinas desde Supabase...');
       
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('machines')
           .select('*')
           .order('serie', { ascending: true })

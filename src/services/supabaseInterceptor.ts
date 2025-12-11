@@ -93,6 +93,7 @@ type SupabaseResponse<T> = {
 /**
  * Ejecutar una query de Supabase con auto-refresh y retry
  * Maneja tanto queries simples como queries con count
+ * Mejorado con timeout para evitar queries colgadas
  */
 export const executeSupabaseQuery = async <T>(
   queryFn: () => Promise<SupabaseResponse<T>>,
@@ -100,56 +101,79 @@ export const executeSupabaseQuery = async <T>(
     maxRetries?: number;
     retryDelay?: number;
     autoRefresh?: boolean;
+    timeout?: number;
   } = {}
 ): Promise<SupabaseResponse<T>> => {
-  const { maxRetries = 1, retryDelay = 1000, autoRefresh = true } = options;
+  const { maxRetries = 1, retryDelay = 1000, autoRefresh = true, timeout = 30000 } = options;
   
   let lastError: any = null;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Asegurar sesión activa antes de ejecutar (proactivo)
-      if (autoRefresh) {
-        const hasActiveSession = await ensureActiveSession();
-        if (!hasActiveSession) {
-          console.log('⚠️ No se pudo asegurar sesión activa, intentando refrescar...');
-          const refreshed = await refreshSession();
-          if (!refreshed) {
-            const { data: { session: newSession } } = await supabase.auth.getSession();
-            if (!newSession) {
-              throw new Error('No hay sesión activa y no se pudo refrescar');
+      // Timeout para toda la operación (incluyendo verificación de sesión)
+      const timeoutPromise = new Promise<SupabaseResponse<T>>((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout: La consulta tardó más de ${timeout}ms`)), timeout)
+      );
+
+      const queryPromise = (async () => {
+        // Verificar sesión rápidamente antes de ejecutar (no bloqueante)
+        if (autoRefresh) {
+          try {
+            const hasActiveSession = await ensureActiveSession();
+            if (!hasActiveSession) {
+              // Si no hay sesión, intentar refresh una vez
+              const refreshed = await refreshSession();
+              if (!refreshed) {
+                // Verificar una vez más directamente
+                const { data: { session: newSession } } = await supabase.auth.getSession();
+                if (!newSession) {
+                  throw new Error('No hay sesión activa');
+                }
+              }
             }
+          } catch (sessionError) {
+            // Si falla la verificación, continuar de todas formas
+            // Supabase manejará el error de autenticación si es necesario
+            // No bloquear la query por esto
           }
         }
-      }
-      
-      // Ejecutar la query
-      const result = await queryFn();
-      
-      // Si hay error de autenticación y auto-refresh está habilitado
-      if (result.error && isAuthError(result.error) && autoRefresh && attempt < maxRetries) {
-        console.log(`🔄 Error de autenticación detectado (intento ${attempt + 1}/${maxRetries + 1}), refrescando sesión...`);
         
-        const refreshed = await refreshSession();
-        if (refreshed) {
-          // Esperar un poco antes de reintentar
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          lastError = result.error;
-          continue; // Reintentar
-        } else {
+        // Ejecutar la query
+        const result = await queryFn();
+        
+        // Si hay error de autenticación y auto-refresh está habilitado
+        if (result.error && isAuthError(result.error) && autoRefresh && attempt < maxRetries) {
+          console.log(`🔄 Error de autenticación detectado (intento ${attempt + 1}/${maxRetries + 1}), refrescando sesión...`);
+          
+          const refreshed = await refreshSession();
+          if (refreshed) {
+            // Esperar un poco antes de reintentar
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            lastError = result.error;
+            throw new Error('RETRY_AUTH_ERROR'); // Lanzar error especial para reintentar
+          } else {
+            throw result.error;
+          }
+        }
+        
+        // Si hay error pero no es de autenticación, o ya se agotaron los reintentos
+        if (result.error) {
           throw result.error;
         }
-      }
-      
-      // Si hay error pero no es de autenticación, o ya se agotaron los reintentos
-      if (result.error) {
-        throw result.error;
-      }
-      
-      // Éxito
-      return result;
+        
+        // Éxito
+        return result;
+      })();
+
+      // Ejecutar con timeout
+      return await Promise.race([queryPromise, timeoutPromise]);
     } catch (error: any) {
       lastError = error;
+      
+      // Si es el error especial de retry de autenticación, continuar el loop
+      if (error?.message === 'RETRY_AUTH_ERROR' && attempt < maxRetries) {
+        continue;
+      }
       
       // Si es error de autenticación y aún hay reintentos disponibles
       if (isAuthError(error) && autoRefresh && attempt < maxRetries) {
@@ -160,6 +184,12 @@ export const executeSupabaseQuery = async <T>(
           await new Promise(resolve => setTimeout(resolve, retryDelay));
           continue; // Reintentar
         }
+      }
+      
+      // Si es timeout, no reintentar
+      if (error?.message?.includes('Timeout')) {
+        console.error('⏱️ Timeout en query de Supabase');
+        throw error;
       }
       
       // Si no es error de autenticación o se agotaron los reintentos, lanzar error

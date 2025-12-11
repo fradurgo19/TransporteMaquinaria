@@ -81,8 +81,8 @@ export const useDeliveryTracking = (deliveryId: string) => {
         throw new Error('No hay sesión activa');
       }
 
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('delivery_tracking')
           .select('*')
           .eq('delivery_id', deliveryId)

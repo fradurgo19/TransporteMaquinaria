@@ -25,16 +25,16 @@ export const useLogisticsDashboard = () => {
       // Ejecutar consultas en paralelo con interceptor
       const [totalResult, pendingResult, deliveredTodayResult, vehiclesResult] = await Promise.all([
         // Total de entregas
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('deliveries')
             .select('id', { count: 'exact', head: true })
             .eq('department', 'logistics')
         ),
 
         // Entregas pendientes
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('deliveries')
             .select('id', { count: 'exact', head: true })
             .eq('department', 'logistics')
@@ -42,8 +42,8 @@ export const useLogisticsDashboard = () => {
         ),
 
         // Entregadas hoy
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('deliveries')
             .select('id', { count: 'exact', head: true })
             .eq('department', 'logistics')
@@ -52,8 +52,8 @@ export const useLogisticsDashboard = () => {
         ),
 
         // Vehículos activos de logística
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('equipment')
             .select('id', { count: 'exact', head: true })
             .eq('department', 'logistics')
@@ -67,8 +67,8 @@ export const useLogisticsDashboard = () => {
       const activeVehicles = vehiclesResult.count || 0;
 
       // Calcular tiempo promedio de entrega (últimas 30 entregas completadas)
-      const completedResult = await executeSupabaseQuery(() =>
-        supabase
+      const completedResult = await executeSupabaseQuery(async () =>
+        await supabase
           .from('deliveries')
           .select('pickup_date, delivery_date')
           .eq('department', 'logistics')
@@ -78,7 +78,7 @@ export const useLogisticsDashboard = () => {
           .order('delivery_date', { ascending: false })
           .limit(30)
       );
-      const completedDeliveries = completedResult.data;
+      const completedDeliveries = Array.isArray(completedResult.data) ? completedResult.data : [];
 
       let averageDeliveryTime = 0;
       if (completedDeliveries && completedDeliveries.length > 0) {
@@ -119,8 +119,8 @@ export const useRecentDeliveries = () => {
         throw new Error('No hay sesión activa');
       }
 
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('deliveries')
           .select('id, tracking_number, customer_name, status, created_at')
           .eq('department', 'logistics')

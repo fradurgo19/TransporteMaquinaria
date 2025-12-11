@@ -24,8 +24,8 @@ export const useVehicleKPG = () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const fuelResult = await executeSupabaseQuery(() =>
-        supabase
+      const fuelResult = await executeSupabaseQuery(async () =>
+        await supabase
           .from('fuel_logs')
           .select('vehicle_plate, distance_traveled, gallons, fuel_efficiency')
           .gte('fuel_date', thirtyDaysAgo.toISOString())
@@ -39,8 +39,8 @@ export const useVehicleKPG = () => {
       const fuelLogs = fuelResult.data || [];
 
       // Obtener información de equipos
-      const equipmentResult = await executeSupabaseQuery(() =>
-        supabase
+      const equipmentResult = await executeSupabaseQuery(async () =>
+        await supabase
           .from('equipment')
           .select('license_plate, brand, vehicle_type')
           .eq('status', 'active')
@@ -51,7 +51,7 @@ export const useVehicleKPG = () => {
         throw equipmentResult.error;
       }
 
-      const equipment = equipmentResult.data || [];
+      const equipmentArray = Array.isArray(equipmentResult.data) ? equipmentResult.data : [];
 
       // Calcular KPG por vehículo
       const vehicleKPGFMap = new Map<string, {
@@ -61,13 +61,14 @@ export const useVehicleKPG = () => {
         vehicle_type: string;
       }>();
 
-      fuelLogs.forEach((log: any) => {
+      const fuelLogsArray = Array.isArray(fuelLogs) ? fuelLogs : [];
+      fuelLogsArray.forEach((log: any) => {
         const plate = log.vehicle_plate;
         const distance = log.distance_traveled || 0;
         const gallons = log.gallons || 0;
 
         if (!vehicleKPGFMap.has(plate)) {
-          const eq = equipment.find((e: any) => e.license_plate === plate);
+          const eq = equipmentArray.find((e: any) => e.license_plate === plate);
           vehicleKPGFMap.set(plate, {
             total_distance: 0,
             total_gallons: 0,
@@ -99,30 +100,42 @@ export const useVehicleKPG = () => {
         });
       }
 
-      // Obtener KPG de fábrica para cada vehículo
-      const manufacturerKPGResult = await executeSupabaseQuery(() =>
-        supabase
-          .from('manufacturer_kpg')
-          .select('*')
-      );
+      // Obtener KPG de fábrica para cada vehículo (opcional - si la tabla no existe, continuar sin estos datos)
+      try {
+        const manufacturerKPGResult = await executeSupabaseQuery(async () =>
+          await supabase
+            .from('manufacturer_kpg')
+            .select('*')
+        );
 
-      if (!manufacturerKPGResult.error && manufacturerKPGResult.data) {
-        vehicleKPGF.forEach((vehicle) => {
-          // Buscar KPG de fábrica que coincida
-          const match = manufacturerKPGResult.data.find(
-            (mkpg: any) =>
-              mkpg.brand === vehicle.brand &&
-              mkpg.vehicle_type === vehicle.vehicle_type
-          );
+        if (!manufacturerKPGResult.error && manufacturerKPGResult.data) {
+          const manufacturerKPGArray = Array.isArray(manufacturerKPGResult.data) ? manufacturerKPGResult.data : [];
+          vehicleKPGF.forEach((vehicle) => {
+            // Buscar KPG de fábrica que coincida
+            const match = manufacturerKPGArray.find(
+              (mkpg: any) =>
+                mkpg.brand === vehicle.brand &&
+                mkpg.vehicle_type === vehicle.vehicle_type
+            );
 
-          if (match) {
-            vehicle.manufacturer_kpg = match.kpg;
-            // Calcular diferencia porcentual
-            if (vehicle.real_kpg > 0 && match.kpg > 0) {
-              vehicle.difference = ((vehicle.real_kpg - match.kpg) / match.kpg) * 100;
+            if (match) {
+              vehicle.manufacturer_kpg = match.kpg;
+              // Calcular diferencia porcentual
+              if (vehicle.real_kpg > 0 && match.kpg > 0) {
+                vehicle.difference = ((vehicle.real_kpg - match.kpg) / match.kpg) * 100;
+              }
             }
-          }
-        });
+          });
+        }
+      } catch (error: any) {
+        // Si la tabla no existe (404) o hay otro error, simplemente continuar sin datos de manufacturer_kpg
+        // Esto es opcional y no debe fallar toda la query
+        if (error?.status === 404 || error?.code === 'PGRST116' || error?.message?.includes('404')) {
+          console.warn('⚠️ Tabla manufacturer_kpg no encontrada, continuando sin datos de KPG de fábrica');
+        } else {
+          console.warn('⚠️ Error al obtener manufacturer_kpg:', error);
+        }
+        // Continuar sin estos datos - no es crítico
       }
 
       // Ordenar por KPG real descendente

@@ -38,24 +38,24 @@ export const useDashboardMetrics = () => {
       // Ejecutar consultas en paralelo con interceptor
       const [equipmentResult, fuelResult, alertsResult] = await Promise.all([
         // Equipos activos
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('equipment')
             .select('id', { count: 'exact', head: true })
             .eq('status', 'active')
         ),
         
         // Consumo total de combustible y métricas (últimos 30 días)
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('fuel_logs')
             .select('gallons, cost, distance_traveled, fuel_efficiency, starting_odometer, ending_odometer')
             .gte('fuel_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         ),
         
         // Documentos próximos a vencer (simplificado - obtener todos y filtrar en memoria)
-        executeSupabaseQuery(() =>
-          supabase
+        executeSupabaseQuery(async () =>
+          await supabase
             .from('equipment')
             .select('id, technical_inspection_expiration, soat_expiration, insurance_policy_expiration, driver_license_expiration')
         ),
@@ -140,8 +140,8 @@ export const useDashboardAlerts = () => {
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       // Obtener equipos con documentos próximos a vencer (con interceptor)
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('equipment')
           .select('id, license_plate, technical_inspection_expiration, soat_expiration, insurance_policy_expiration, driver_license_expiration')
           .order('license_plate', { ascending: true })
@@ -153,12 +153,12 @@ export const useDashboardAlerts = () => {
         throw result.error;
       }
 
-      const equipment = result.data;
-      if (!equipment) return [];
+      const equipment = result.data as any[];
+      if (!equipment || !Array.isArray(equipment)) return [];
 
       const alerts: Alert[] = [];
 
-      equipment.forEach((eq) => {
+      equipment.forEach((eq: any) => {
         const fields = [
           { date: eq.technical_inspection_expiration, name: 'Revisión Técnica' },
           { date: eq.soat_expiration, name: 'SOAT' },

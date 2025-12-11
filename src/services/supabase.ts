@@ -7,6 +7,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Helper para crear AbortController con timeout (compatible con navegadores más antiguos)
+const createTimeoutSignal = (timeoutMs: number): AbortSignal => {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -22,6 +29,27 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'x-client-info': 'transport-management-app',
+    },
+    // Timeout para requests HTTP (30 segundos)
+    fetch: (url, options = {}) => {
+      const timeoutMs = 30000;
+      
+      // Si ya hay un signal, usarlo; si no, crear uno con timeout
+      let signal = options.signal;
+      if (!signal) {
+        signal = createTimeoutSignal(timeoutMs);
+      }
+      
+      return fetch(url, {
+        ...options,
+        signal,
+      }).catch((error) => {
+        // Si es error de timeout, lanzar error más descriptivo
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+          throw new Error(`Request timeout después de ${timeoutMs}ms`);
+        }
+        throw error;
+      });
     },
   },
   realtime: {

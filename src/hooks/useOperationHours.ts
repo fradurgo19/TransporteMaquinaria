@@ -71,7 +71,7 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
       query = query.range(from, to);
 
       // Usar interceptor para manejar auto-refresh de sesión
-      const result = await executeSupabaseQuery(() => query);
+      const result = await executeSupabaseQuery(async () => await query);
 
       if (result.error) {
         console.error('❌ Error fetching operation hours:', result.error);
@@ -127,8 +127,8 @@ export const useActiveOperationHour = (vehiclePlate?: string) => {
       if (!vehiclePlate) return null;
 
       // Usar interceptor para manejar auto-refresh de sesión
-      const result = await executeSupabaseQuery(() =>
-        supabase
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
           .from('operation_hours')
           .select('*')
           .eq('vehicle_plate', vehiclePlate)
