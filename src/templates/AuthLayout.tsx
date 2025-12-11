@@ -1,5 +1,4 @@
 import React from 'react';
-import { Truck } from 'lucide-react';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -12,11 +11,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title }) => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-primary p-4 rounded-full">
-              <Truck className="h-12 w-12 text-white" />
-            </div>
+            <img 
+              src="https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png" 
+              alt="Partequipos S.A.S" 
+              className="h-16 w-auto object-contain"
+              style={{ maxHeight: '80px' }}
+            />
           </div>
-          <h1 className="text-3xl font-bold text-secondary-900">Transport Manager</h1>
           <p className="mt-2 text-secondary-600">{title}</p>
         </div>
 

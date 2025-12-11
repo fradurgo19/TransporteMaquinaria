@@ -71,8 +71,11 @@ export const OperationsPage: React.FC = () => {
   const [isLoadingOperations, setIsLoadingOperations] = useState(false);
   const [sendingNotification, setSendingNotification] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  // Para invitados: permitir ingresar placa manualmente si no hay equipo seleccionado
+  const [manualVehiclePlate, setManualVehiclePlate] = useState('');
   
   const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
+  const isGuest = user?.role === 'guest'; // Usuarios invitados pueden crear operaciones pero solo ven las suyas
 
   // Efecto para llenar automáticamente el origen cuando hay GPS (solo en paso loading)
   useEffect(() => {
@@ -194,8 +197,18 @@ export const OperationsPage: React.FC = () => {
 
   // Función para guardar cada paso
   const saveStep = async (step: OperationStep) => {
-    if (!selectedEquipment || !user) {
-      alert('Selecciona un equipo primero');
+    if (!user) {
+      alert('⚠️ Debes estar autenticado');
+      return;
+    }
+    
+    // Para invitados, permitir placa manual si no hay equipo seleccionado
+    const vehiclePlate = isGuest && !selectedEquipment 
+      ? manualVehiclePlate.trim().toUpperCase()
+      : selectedEquipment?.license_plate;
+    
+    if (!vehiclePlate) {
+      alert('⚠️ Debes ingresar la placa del vehículo');
       return;
     }
 
@@ -221,24 +234,29 @@ export const OperationsPage: React.FC = () => {
     try {
       let photoUrl = '';
       
+      // Obtener placa del vehículo (equipo seleccionado o manual para invitados)
+      const vehiclePlate = isGuest && !selectedEquipment 
+        ? manualVehiclePlate.trim().toUpperCase()
+        : selectedEquipment?.license_plate || '';
+      
       // Subir foto
       if (step === 'loading' && loadingData.photo) {
         const compressed = await compressImage(loadingData.photo.file);
-        const upload = await uploadFile(compressed, 'operation-photos', `${selectedEquipment.license_plate}/${format(new Date(), 'yyyy-MM-dd')}`);
+        const upload = await uploadFile(compressed, 'operation-photos', `${vehiclePlate}/${format(new Date(), 'yyyy-MM-dd')}`);
         if (upload) photoUrl = upload.url;
       } else if (step === 'route_start' && routeStartData.photo) {
         const compressed = await compressImage(routeStartData.photo.file);
-        const upload = await uploadFile(compressed, 'operation-photos', `${selectedEquipment.license_plate}/${format(new Date(), 'yyyy-MM-dd')}`);
+        const upload = await uploadFile(compressed, 'operation-photos', `${vehiclePlate}/${format(new Date(), 'yyyy-MM-dd')}`);
         if (upload) photoUrl = upload.url;
       } else if (step === 'delivery' && deliveryData.photo) {
         const compressed = await compressImage(deliveryData.photo.file);
-        const upload = await uploadFile(compressed, 'operation-photos', `${selectedEquipment.license_plate}/${format(new Date(), 'yyyy-MM-dd')}`);
+        const upload = await uploadFile(compressed, 'operation-photos', `${vehiclePlate}/${format(new Date(), 'yyyy-MM-dd')}`);
         if (upload) photoUrl = upload.url;
       }
 
       // Guardar operación
       const operationData: any = {
-        vehicle_plate: selectedEquipment.license_plate,
+        vehicle_plate: vehiclePlate,
         operation_type: step,
         gps_latitude: latitude || 4.6097,
         gps_longitude: longitude || -74.0817,
@@ -252,12 +270,13 @@ export const OperationsPage: React.FC = () => {
         operationData.notes = loadingData.notes || null;
       } else if (step === 'route_start') {
         // Obtener datos del loading anterior
-        const loadingOp = await executeSupabaseQuery(() =>
-          supabase
+        const loadingOp = await executeSupabaseQuery(async () =>
+          await supabase
             .from('operations')
             .select('equipment_serial, origin')
-            .eq('vehicle_plate', selectedEquipment.license_plate)
+            .eq('vehicle_plate', vehiclePlate)
             .eq('operation_type', 'loading')
+            .eq('created_by', user.id) // Solo buscar en operaciones del usuario actual
             .order('operation_timestamp', { ascending: false })
             .limit(1)
             .single()
@@ -271,12 +290,13 @@ export const OperationsPage: React.FC = () => {
         operationData.notes = routeStartData.notes || null;
       } else if (step === 'delivery') {
         // Obtener datos del route_start anterior
-        const routeStartOp = await executeSupabaseQuery(() =>
-          supabase
+        const routeStartOp = await executeSupabaseQuery(async () =>
+          await supabase
             .from('operations')
             .select('equipment_serial, origin, destination')
-            .eq('vehicle_plate', selectedEquipment.license_plate)
+            .eq('vehicle_plate', vehiclePlate)
             .eq('operation_type', 'route_start')
+            .eq('created_by', user.id) // Solo buscar en operaciones del usuario actual
             .order('operation_timestamp', { ascending: false })
             .limit(1)
             .single()
@@ -367,13 +387,19 @@ export const OperationsPage: React.FC = () => {
   const loadOperations = async () => {
     setIsLoadingOperations(true);
     try {
-      const result = await executeSupabaseQuery(() =>
-        supabase
-          .from('operations')
-          .select('*')
-          .order('operation_timestamp', { ascending: false })
-          .limit(50)
-      );
+      // Si es invitado, solo cargar sus propias operaciones
+      let query = supabase
+        .from('operations')
+        .select('*')
+        .order('operation_timestamp', { ascending: false })
+        .limit(50);
+      
+      // Filtrar por usuario si es invitado
+      if (isGuest && user?.id) {
+        query = query.eq('created_by', user.id);
+      }
+      
+      const result = await executeSupabaseQuery(async () => await query);
 
       if (result.data) {
         setOperations(result.data.map(op => ({
@@ -398,7 +424,7 @@ export const OperationsPage: React.FC = () => {
 
   useEffect(() => {
     loadOperations();
-  }, []);
+  }, [user?.id, isGuest]); // Recargar cuando cambie el usuario o el rol
 
   // Función para enviar notificaciones
   const handleSendNotification = async (operationId: string) => {
@@ -483,6 +509,11 @@ export const OperationsPage: React.FC = () => {
             <p className="mt-2 text-gray-600">
               Registra carga, inicio de ruta y entregas de forma secuencial
             </p>
+            {isGuest && (
+              <p className="mt-1 text-sm text-blue-600 font-medium">
+                Modo invitado: Solo puedes ver y gestionar tus propias operaciones
+              </p>
+            )}
           </div>
           <Button onClick={() => setShowForm(!showForm)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -498,17 +529,27 @@ export const OperationsPage: React.FC = () => {
             <CardBody>
               {/* Información del Equipo */}
               <div className="rounded-lg p-4 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #50504f' }}>
-                  <h3 className="text-sm font-semibold mb-3" style={{ color: '#50504f' }}>Equipo Seleccionado</h3>
+                  <h3 className="text-sm font-semibold mb-3" style={{ color: '#50504f' }}>Información del Vehículo</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-medium" style={{ color: '#50504f' }}>Placa del Vehículo</label>
-                    <p className="text-lg font-bold" style={{ color: '#cf1b22' }}>{selectedEquipment?.license_plate || 'No seleccionado'}</p>
+                      <label className="text-xs font-medium" style={{ color: '#50504f' }}>Placa del Vehículo *</label>
+                      {isGuest && !selectedEquipment ? (
+                        <Input
+                          value={manualVehiclePlate}
+                          onChange={(e) => setManualVehiclePlate(e.target.value.toUpperCase())}
+                          placeholder="Ej: ABC123"
+                          required
+                          className="mt-1"
+                        />
+                      ) : (
+                        <p className="text-lg font-bold mt-1" style={{ color: '#cf1b22' }}>{selectedEquipment?.license_plate || 'No seleccionado'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium" style={{ color: '#50504f' }}>Usuario</label>
+                      <p className="text-lg font-bold mt-1" style={{ color: '#50504f' }}>{user?.full_name || user?.username || 'N/A'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium" style={{ color: '#50504f' }}>Conductor</label>
-                    <p className="text-lg font-bold" style={{ color: '#50504f' }}>{user?.full_name || user?.username || 'N/A'}</p>
-                  </div>
-                </div>
               </div>
 
               {/* Línea de Tiempo */}

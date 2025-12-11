@@ -26,7 +26,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <AuthLayout title={isLogin ? 'Sign in to your account' : 'Create a new account'}>
+    <AuthLayout title={isLogin ? 'Gestión de Transporte Partequipos S.A.S' : 'Create a new account'}>
       {isLogin ? (
         <LoginForm
           onSubmit={handleLogin}

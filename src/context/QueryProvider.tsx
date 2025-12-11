@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { startSessionHeartbeat, stopSessionHeartbeat, ensureActiveSession, refreshSessionIfNeeded } from '../services/sessionManager';
+import { startSessionHeartbeat, stopSessionHeartbeat, refreshSessionIfNeeded } from '../services/sessionManager';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,37 +67,24 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
         
         // Solo refrescar si estuvo oculta por más de 1 minuto Y han pasado al menos 10 segundos desde la última invalidación
         if (timeHidden > MIN_HIDDEN_TIME && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-          console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, verificando sesión y refrescando datos...`);
+          console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, refrescando datos...`);
           
-          try {
-            // CRÍTICO: Verificar y refrescar sesión ANTES de refrescar queries
-            const sessionRefreshed = await refreshSessionIfNeeded();
-            if (!sessionRefreshed) {
-              // Intentar asegurar sesión activa
-              const hasActiveSession = await ensureActiveSession();
-              if (!hasActiveSession) {
-                console.error('❌ No se pudo verificar/refrescar sesión después de inactividad');
-                // No refrescar queries si no hay sesión activa
-                hiddenTime = null;
-                return;
-              }
+          lastInvalidationTime = now;
+          
+          // Refrescar queries directamente sin verificar sesión primero
+          // Si hay problemas de sesión, las queries lo manejarán automáticamente
+          queryClient.refetchQueries({ 
+            type: 'active',
+            predicate: (query) => {
+              const dataAge = now - (query.state.dataUpdatedAt || 0);
+              return dataAge > MIN_HIDDEN_TIME;
             }
-            
-            console.log('✅ Sesión verificada/refrescada, refrescando queries...');
-            lastInvalidationTime = now;
-            
-            // Refrescar solo queries activas que están stale (más de 1 minuto)
-            queryClient.refetchQueries({ 
-              type: 'active',
-              predicate: (query) => {
-                const dataAge = now - (query.state.dataUpdatedAt || 0);
-                return dataAge > MIN_HIDDEN_TIME;
-              }
-            });
-          } catch (error) {
-            console.error('❌ Error al verificar sesión después de inactividad:', error);
-            // No refrescar queries si hay error
-          }
+          });
+          
+          // Refrescar sesión en background (no bloqueante)
+          refreshSessionIfNeeded().catch(() => {
+            // Ignorar errores de refresh en background
+          });
         }
         
         hiddenTime = null;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Menu, Truck } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../atoms/Button';
 
@@ -30,10 +30,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuToggle }) => {
                 <Menu className="h-6 w-6" />
               </button>
             )}
-            <Link to="/" className="flex items-center space-x-2">
-              <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-              <span className="text-base sm:text-xl font-bold text-secondary-900">
-                Transport Manager
+            <Link to="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
+              <img 
+                src="https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png" 
+                alt="Partequipos S.A.S" 
+                className="h-8 w-auto sm:h-10 object-contain"
+                style={{ maxHeight: '40px' }}
+              />
+              <span className="hidden sm:block text-base sm:text-lg font-semibold" style={{ color: '#50504f' }}>
+                Gestión de Transporte Partequipos
               </span>
             </Link>
           </div>

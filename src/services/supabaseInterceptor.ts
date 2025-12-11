@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { ensureActiveSession } from './sessionManager';
 
 /**
  * Interceptor global para Supabase que maneja automáticamente:
@@ -110,35 +109,17 @@ export const executeSupabaseQuery = async <T>(
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Timeout para toda la operación (incluyendo verificación de sesión)
+      // Timeout para toda la operación (solo la query, no verificación de sesión)
       const timeoutPromise = new Promise<SupabaseResponse<T>>((_, reject) => 
         setTimeout(() => reject(new Error(`Timeout: La consulta tardó más de ${timeout}ms`)), timeout)
       );
 
       const queryPromise = (async () => {
-        // Verificar sesión rápidamente antes de ejecutar (no bloqueante)
-        if (autoRefresh) {
-          try {
-            const hasActiveSession = await ensureActiveSession();
-            if (!hasActiveSession) {
-              // Si no hay sesión, intentar refresh una vez
-              const refreshed = await refreshSession();
-              if (!refreshed) {
-                // Verificar una vez más directamente
-                const { data: { session: newSession } } = await supabase.auth.getSession();
-                if (!newSession) {
-                  throw new Error('No hay sesión activa');
-                }
-              }
-            }
-          } catch (sessionError) {
-            // Si falla la verificación, continuar de todas formas
-            // Supabase manejará el error de autenticación si es necesario
-            // No bloquear la query por esto
-          }
-        }
+        // NO verificar sesión antes de ejecutar - ejecutar directamente
+        // Si hay error de auth, lo manejaremos después
+        // Esto evita bloqueos y timeouts innecesarios
         
-        // Ejecutar la query
+        // Ejecutar la query directamente
         const result = await queryFn();
         
         // Si hay error de autenticación y auto-refresh está habilitado

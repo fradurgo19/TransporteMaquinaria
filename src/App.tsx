@@ -79,7 +79,7 @@ const DashboardRedirect: React.FC = () => {
     return <Navigate to="/deliveries" replace />;
   }
   
-  // Invitados van directo a operaciones (solo lectura)
+  // Invitados van directo a operaciones (pueden crear operaciones, solo ven las suyas)
   if (user?.role === 'guest') {
     return <Navigate to="/operations" replace />;
   }
