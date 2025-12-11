@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { ensureActiveSession } from '../services/sessionManager';
 
 interface FuelLog {
   id: string;
@@ -39,44 +40,68 @@ export const useFuelLogs = (params: FuelLogQueryParams = {}) => {
   return useQuery({
     queryKey: ['fuel_logs', page, limit, startDate, endDate, vehiclePlate],
     queryFn: async () => {
-      let query = supabase
-        .from('fuel_logs')
-        .select('*', { count: 'exact' })
-        .order('fuel_date', { ascending: false })
-        .order('created_at', { ascending: false });
+      // Timeout para evitar que la query se quede colgada
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout: La consulta tardó demasiado')), 30000)
+      );
 
-      if (startDate) {
-        query = query.gte('fuel_date', startDate);
-      }
+      const queryPromise = (async () => {
+        // Asegurar sesión activa antes de hacer la query (proactivo)
+        const hasActiveSession = await ensureActiveSession();
+        if (!hasActiveSession) {
+          console.error('❌ No hay sesión activa para cargar fuel logs');
+          throw new Error('No hay sesión activa');
+        }
 
-      if (endDate) {
-        query = query.lte('fuel_date', endDate);
-      }
+        let query = supabase
+          .from('fuel_logs')
+          .select('*', { count: 'exact' })
+          .order('fuel_date', { ascending: false })
+          .order('created_at', { ascending: false });
 
-      if (vehiclePlate) {
-        query = query.eq('vehicle_plate', vehiclePlate.toUpperCase());
-      }
+        if (startDate) {
+          query = query.gte('fuel_date', startDate);
+        }
 
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
+        if (endDate) {
+          query = query.lte('fuel_date', endDate);
+        }
 
-      query = query.range(from, to);
+        if (vehiclePlate) {
+          query = query.eq('vehicle_plate', vehiclePlate.toUpperCase());
+        }
 
-      const { data, error, count } = await query;
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
 
-      if (error) {
-        console.error('Error fetching fuel logs:', error);
-        throw error;
-      }
+        query = query.range(from, to);
 
-      return {
-        data: (data || []) as FuelLog[],
-        total: count || 0,
-        page,
-        limit,
-      };
+        const { data, error, count } = await query;
+
+        if (error) {
+          console.error('Error fetching fuel logs:', error);
+          throw error;
+        }
+
+        return {
+          data: (data || []) as FuelLog[],
+          total: count || 0,
+          page,
+          limit,
+        };
+      })();
+
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<{
+        data: FuelLog[];
+        total: number;
+        page: number;
+        limit: number;
+      }>;
     },
-    staleTime: 30000, // 30 segundos
+    staleTime: 30 * 1000, // 30 segundos
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
   });
 };
 

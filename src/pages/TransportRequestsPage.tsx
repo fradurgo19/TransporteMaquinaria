@@ -6,25 +6,14 @@ import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Plus, Truck, Loader, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Plus, Truck, Loader, CheckCircle, Clock, XCircle, RefreshCw } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 import { format } from 'date-fns';
 import { sendTransportRequestNotification } from '../services/transportRequestNotifications';
-
-interface Machine {
-  id: string;
-  serie: string;
-  descripcion: string;
-  marca: string;
-  modelo: string;
-  ancho: number;
-  alto: number;
-  largo: number;
-  peso: number;
-}
+import { useMachines, Machine } from '../hooks/useMachines';
 
 interface TransportRequest {
   id: string;
@@ -52,11 +41,13 @@ export const TransportRequestsPage: React.FC = () => {
   const canCreateRequests = isCommercial || isAdmin; // Administradores también pueden crear
 
   const [showForm, setShowForm] = useState(false);
-  const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [requests, setRequests] = useState<TransportRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Usar React Query para cargar máquinas con refetch automático
+  const { data: machines = [], isLoading: isLoadingMachines, refetch: refetchMachines } = useMachines();
 
   const [formData, setFormData] = useState({
     serie: '',
@@ -78,32 +69,18 @@ export const TransportRequestsPage: React.FC = () => {
     notes: '',
   });
 
-  // Cargar máquinas
-  useEffect(() => {
-    loadMachines();
-  }, []);
-
   // Cargar solicitudes
   useEffect(() => {
     loadRequests();
   }, []);
 
-  const loadMachines = async () => {
-    try {
-      const result = await executeSupabaseQuery(() =>
-        supabase
-          .from('machines')
-          .select('*')
-          .order('serie', { ascending: true })
-      );
-
-      if (result.data) {
-        setMachines(result.data as Machine[]);
-      }
-    } catch (error) {
-      console.error('Error cargando máquinas:', error);
+  // Refrescar máquinas cuando se abre el formulario
+  useEffect(() => {
+    if (showForm && machines.length === 0) {
+      console.log('🔄 Formulario abierto sin máquinas, refrescando...');
+      refetchMachines();
     }
-  };
+  }, [showForm, machines.length, refetchMachines]);
 
   const loadRequests = async () => {
     setIsLoading(true);
@@ -132,6 +109,22 @@ export const TransportRequestsPage: React.FC = () => {
   };
 
   const handleSerieChange = (serie: string) => {
+    if (!serie) {
+      setSelectedMachine(null);
+      setFormData({
+        ...formData,
+        serie: '',
+        descripcion: '',
+        marca: '',
+        modelo: '',
+        ancho: '',
+        alto: '',
+        largo: '',
+        peso: '',
+      });
+      return;
+    }
+
     const machine = machines.find(m => m.serie === serie);
     
     if (machine) {
@@ -314,7 +307,8 @@ export const TransportRequestsPage: React.FC = () => {
             <Button
               onClick={() => setShowForm(!showForm)}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-white hover:opacity-90"
+              style={{ backgroundColor: '#cf1b22' }}
             >
               <Plus className="h-4 w-4 mr-2" />
               {showForm ? 'Cancelar' : 'Nueva Solicitud'}
@@ -324,7 +318,7 @@ export const TransportRequestsPage: React.FC = () => {
 
         {showForm && canCreateRequests && (
           <Card className="max-w-4xl mx-auto">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+            <CardHeader className="bg-gradient-to-r text-white" style={{ background: 'linear-gradient(to right, #cf1b22, #cf1b22)' }}>
               <h2 className="text-lg font-semibold flex items-center">
                 <Truck className="h-5 w-5 mr-2" />
                 Nueva Solicitud de Transporte
@@ -333,28 +327,58 @@ export const TransportRequestsPage: React.FC = () => {
             <CardBody className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Información de la Máquina */}
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600 rounded-r-lg p-4">
-                  <h3 className="text-sm font-semibold text-blue-900 uppercase tracking-wide mb-3">
+                <div className="border-l-4 rounded-r-lg p-4" style={{ backgroundColor: '#FFFFFF', borderLeftColor: '#cf1b22', border: '1px solid #50504f' }}>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#50504f' }}>
                     Información del Equipo
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-blue-700 font-medium mb-1">
-                        Serie <span className="text-red-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium" style={{ color: '#50504f' }}>
+                          Serie <span className="text-red-500">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => refetchMachines()}
+                          disabled={isLoadingMachines}
+                          className="text-xs flex items-center gap-1 hover:opacity-80 disabled:opacity-50"
+                          style={{ color: '#cf1b22' }}
+                          title="Refrescar lista de máquinas"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${isLoadingMachines ? 'animate-spin' : ''}`} />
+                          {isLoadingMachines ? 'Cargando...' : 'Refrescar'}
+                        </button>
+                      </div>
                       <select
                         value={formData.serie}
                         onChange={(e) => handleSerieChange(e.target.value)}
-                        className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                        style={{ 
+                          borderColor: '#50504f',
+                          focusRingColor: '#cf1b22'
+                        }}
                         required
+                        disabled={isLoadingMachines}
                       >
-                        <option value="">Selecciona una serie</option>
+                        <option value="">
+                          {isLoadingMachines ? 'Cargando máquinas...' : 'Selecciona una serie'}
+                        </option>
+                        {machines.length === 0 && !isLoadingMachines && (
+                          <option value="" disabled>
+                            No hay máquinas disponibles. Haz clic en "Refrescar" para cargar.
+                          </option>
+                        )}
                         {machines.map((machine) => (
                           <option key={machine.id} value={machine.serie}>
-                            {machine.serie} - {machine.marca} {machine.modelo}
+                            {machine.serie} - {machine.marca || 'N/A'} {machine.modelo || ''}
                           </option>
                         ))}
                       </select>
+                      {machines.length === 0 && !isLoadingMachines && (
+                        <p className="text-xs mt-1" style={{ color: '#cf1b22' }}>
+                          No se encontraron máquinas. Verifica tu conexión o haz clic en "Refrescar".
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Input

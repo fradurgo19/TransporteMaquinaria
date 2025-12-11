@@ -26,22 +26,30 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('equipment-documents', 'equipment-documents', false)
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('runt-images', 'runt-images', true)
+ON CONFLICT (id) DO NOTHING;
+
 -- Políticas para fuel-receipts
+DROP POLICY IF EXISTS "Users can upload fuel receipts" ON storage.objects;
 CREATE POLICY "Users can upload fuel receipts"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'fuel-receipts');
 
+DROP POLICY IF EXISTS "Users can view fuel receipts" ON storage.objects;
 CREATE POLICY "Users can view fuel receipts"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (bucket_id = 'fuel-receipts');
 
+DROP POLICY IF EXISTS "Users can update fuel receipts" ON storage.objects;
 CREATE POLICY "Users can update fuel receipts"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'fuel-receipts');
 
+DROP POLICY IF EXISTS "Admins can delete fuel receipts" ON storage.objects;
 CREATE POLICY "Admins can delete fuel receipts"
 ON storage.objects FOR DELETE
 TO authenticated
@@ -51,21 +59,25 @@ USING (
 );
 
 -- Políticas para operation-photos
+DROP POLICY IF EXISTS "Users can upload operation photos" ON storage.objects;
 CREATE POLICY "Users can upload operation photos"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'operation-photos');
 
+DROP POLICY IF EXISTS "Users can view operation photos" ON storage.objects;
 CREATE POLICY "Users can view operation photos"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (bucket_id = 'operation-photos');
 
+DROP POLICY IF EXISTS "Users can update operation photos" ON storage.objects;
 CREATE POLICY "Users can update operation photos"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'operation-photos');
 
+DROP POLICY IF EXISTS "Admins can delete operation photos" ON storage.objects;
 CREATE POLICY "Admins can delete operation photos"
 ON storage.objects FOR DELETE
 TO authenticated
@@ -75,21 +87,25 @@ USING (
 );
 
 -- Políticas para checklist-photos
+DROP POLICY IF EXISTS "Users can upload checklist photos" ON storage.objects;
 CREATE POLICY "Users can upload checklist photos"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'checklist-photos');
 
+DROP POLICY IF EXISTS "Users can view checklist photos" ON storage.objects;
 CREATE POLICY "Users can view checklist photos"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (bucket_id = 'checklist-photos');
 
+DROP POLICY IF EXISTS "Users can update checklist photos" ON storage.objects;
 CREATE POLICY "Users can update checklist photos"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'checklist-photos');
 
+DROP POLICY IF EXISTS "Admins can delete checklist photos" ON storage.objects;
 CREATE POLICY "Admins can delete checklist photos"
 ON storage.objects FOR DELETE
 TO authenticated
@@ -99,16 +115,19 @@ USING (
 );
 
 -- Políticas para equipment-documents
+DROP POLICY IF EXISTS "Users can upload equipment documents" ON storage.objects;
 CREATE POLICY "Users can upload equipment documents"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'equipment-documents');
 
+DROP POLICY IF EXISTS "Users can view equipment documents" ON storage.objects;
 CREATE POLICY "Users can view equipment documents"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (bucket_id = 'equipment-documents');
 
+DROP POLICY IF EXISTS "Admins can update equipment documents" ON storage.objects;
 CREATE POLICY "Admins can update equipment documents"
 ON storage.objects FOR UPDATE
 TO authenticated
@@ -117,11 +136,40 @@ USING (
   EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'admin_logistics'))
 );
 
+DROP POLICY IF EXISTS "Admins can delete equipment documents" ON storage.objects;
 CREATE POLICY "Admins can delete equipment documents"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'equipment-documents' AND
+  EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'admin_logistics'))
+);
+
+-- Políticas para runt-images (imágenes del RUNT)
+DROP POLICY IF EXISTS "Public Access for RUNT images" ON storage.objects;
+CREATE POLICY "Public Access for RUNT images"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'runt-images');
+
+DROP POLICY IF EXISTS "Users can upload RUNT images" ON storage.objects;
+CREATE POLICY "Users can upload RUNT images"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'runt-images');
+
+DROP POLICY IF EXISTS "Users can update RUNT images" ON storage.objects;
+CREATE POLICY "Users can update RUNT images"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'runt-images');
+
+DROP POLICY IF EXISTS "Admins can delete RUNT images" ON storage.objects;
+CREATE POLICY "Admins can delete RUNT images"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'runt-images' AND
   EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'admin_logistics'))
 );
 

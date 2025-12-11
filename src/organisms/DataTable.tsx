@@ -36,7 +36,7 @@ export function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   {column.label}
                 </th>
@@ -47,7 +47,7 @@ export function DataTable<T extends Record<string, any>>({
             {[...Array(5)].map((_, i) => (
               <tr key={i}>
                 {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4">
+                  <td key={column.key} className="px-3 py-2">
                     <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                   </td>
                 ))}
@@ -104,7 +104,7 @@ export function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                  className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 align-middle"
                 >
                   {column.render ? column.render(item) : item[column.key]}
                 </td>

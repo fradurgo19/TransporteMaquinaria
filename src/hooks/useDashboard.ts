@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase, QUERY_LIMITS } from '../services/supabase';
 import { executeSupabaseQuery } from '../services/supabaseInterceptor';
+import { ensureActiveSession } from '../services/sessionManager';
 
 interface DashboardMetrics {
   totalKilometers: number;
@@ -27,6 +28,13 @@ export const useDashboardMetrics = () => {
   return useQuery({
     queryKey: ['dashboard', 'metrics'],
     queryFn: async (): Promise<DashboardMetrics> => {
+      // Asegurar sesión activa antes de hacer las queries (proactivo)
+      const hasActiveSession = await ensureActiveSession();
+      if (!hasActiveSession) {
+        console.error('❌ No hay sesión activa para cargar métricas del dashboard');
+        throw new Error('No hay sesión activa');
+      }
+
       // Ejecutar consultas en paralelo con interceptor
       const [equipmentResult, fuelResult, alertsResult] = await Promise.all([
         // Equipos activos
@@ -114,7 +122,9 @@ export const useDashboardMetrics = () => {
         kmPerGallon: Math.round(kmPerGallon * 100) / 100,
       };
     },
-    staleTime: 2 * 60 * 1000, // 2 minutos
+    staleTime: 30 * 1000, // 30 segundos
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     gcTime: 5 * 60 * 1000,
   });
 };

@@ -1,26 +1,29 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 import { supabase } from '../services/supabase';
+import { startSessionHeartbeat, stopSessionHeartbeat } from '../services/sessionManager';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false, // Desactivado completamente - no refrescar en focus
-      refetchOnMount: true, // Refrescar al montar solo si los datos están stale
+      refetchOnWindowFocus: true, // ACTIVADO: Refrescar cuando la ventana recupera el foco
+      refetchOnMount: true, // Refrescar al montar si los datos están stale
       refetchOnReconnect: true, // Refrescar cuando se reconecta la red
-      retry: (failureCount, error: any) => {
+      retry: (failureCount) => {
         // El interceptor maneja los errores de autenticación con auto-refresh
         // Permitir retry para todos los errores (el interceptor se encargará de refrescar tokens)
         // Pero limitar a 2 reintentos para evitar loops infinitos
         return failureCount < 2;
       },
-      staleTime: 2 * 60 * 1000, // Considerar datos stale después de 2 minutos
-      gcTime: 10 * 60 * 1000, // Mantener en cache por 10 minutos
+      staleTime: 30 * 1000, // Considerar datos stale después de 30 segundos (más frecuente)
+      gcTime: 5 * 60 * 1000, // Mantener en cache por 5 minutos
       structuralSharing: true,
       networkMode: 'online',
+      // Timeout para evitar que las queries se queden colgadas
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: (failureCount, error: any) => {
+      retry: (failureCount) => {
         // El interceptor maneja los errores de autenticación
         // Permitir 1 reintento para mutations
         return failureCount < 1;
@@ -36,10 +39,13 @@ interface QueryProviderProps {
 
 export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
   useEffect(() => {
+    // Iniciar heartbeat para mantener sesión activa
+    startSessionHeartbeat();
+
     let hiddenTime: number | null = null;
     let lastInvalidationTime = 0;
-    const MIN_HIDDEN_TIME = 2 * 60 * 1000; // Mínimo 2 minutos oculta para refrescar
-    const INVALIDATION_COOLDOWN = 30 * 1000; // 30 segundos mínimo entre invalidaciones
+    const MIN_HIDDEN_TIME = 1 * 60 * 1000; // Mínimo 1 minuto oculta para refrescar (más agresivo)
+    const INVALIDATION_COOLDOWN = 10 * 1000; // 10 segundos mínimo entre invalidaciones (más frecuente)
 
     // Listener para detectar cuando la app vuelve a estar visible después de estar oculta
     const handleVisibilityChange = () => {
@@ -72,7 +78,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     };
 
     // Listener para cambios de sesión de Supabase (solo eventos importantes)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       // Solo loguear eventos importantes, no todos
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
         console.log('🔐 Auth state changed:', event);
@@ -80,17 +86,21 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         // Cuando se renueva el token o se inicia sesión, invalidar todas las queries
-        // pero solo si han pasado al menos 30 segundos
+        // pero solo si han pasado al menos 10 segundos desde la última invalidación
         const now = Date.now();
         if ((now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-          console.log('🔄 Sesión renovada, invalidando queries...');
+          console.log('🔄 Sesión renovada, invalidando y refrescando queries...');
           lastInvalidationTime = now;
+          // Invalidar todas las queries y refrescar las activas
           queryClient.invalidateQueries();
+          // Refrescar inmediatamente las queries activas
+          queryClient.refetchQueries({ type: 'active' });
         }
       } else if (event === 'SIGNED_OUT') {
         // Limpiar todas las queries cuando se cierra sesión
         console.log('🚪 Sesión cerrada, limpiando queries...');
         queryClient.clear();
+        stopSessionHeartbeat();
       }
     });
 
@@ -101,6 +111,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription.unsubscribe();
+      stopSessionHeartbeat();
     };
   }, []);
 

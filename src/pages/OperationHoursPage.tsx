@@ -6,7 +6,7 @@ import { Badge } from '../atoms/Badge';
 import { Input } from '../atoms/Input';
 import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Clock, CheckCircle, Plus, X } from 'lucide-react';
+import { Clock, CheckCircle, Plus, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
@@ -57,7 +57,8 @@ export const OperationHoursPage: React.FC = () => {
     data: operationHoursData, 
     isLoading, 
     error: operationHoursError,
-    isError 
+    isError,
+    refetch: refetchOperationHours
   } = useOperationHours({
     vehiclePlate: isAdmin ? undefined : selectedEquipment?.license_plate,
   });
@@ -522,14 +523,25 @@ export const OperationHoursPage: React.FC = () => {
           <CardBody className="p-0">
             {isError ? (
               <div className="p-8 text-center">
-                <p className="text-red-600 mb-2">
-                  ❌ Error al cargar las horas de operación
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <p className="text-red-600 mb-2 font-semibold">
+                  Error al cargar las horas de operación
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
                   {operationHoursError instanceof Error 
-                    ? operationHoursError.message 
+                    ? (operationHoursError.message.includes('Timeout') 
+                        ? 'La consulta tardó demasiado. Verifica tu conexión.'
+                        : operationHoursError.message)
                     : 'Error desconocido'}
                 </p>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => refetchOperationHours()}
+                  className="mr-2"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reintentar
+                </Button>
                 <Button 
                   variant="secondary" 
                   onClick={() => window.location.reload()}

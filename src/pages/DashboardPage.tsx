@@ -69,20 +69,20 @@ export const DashboardPage: React.FC = () => {
 
         {/* Indicadores de Combustible */}
         <Card>
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 sm:p-4">
+          <CardHeader className="bg-gradient-to-r text-white p-3 sm:p-4" style={{ background: 'linear-gradient(to right, #cf1b22, #cf1b22)' }}>
             <h2 className="text-base sm:text-lg md:text-xl font-semibold">📊 Campos Calculados (Indicadores)</h2>
           </CardHeader>
           <CardBody className="p-3 sm:p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                <label className="text-xs sm:text-sm text-blue-700 font-medium block mb-2">Kms Recorridos</label>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">
+              <div className="rounded-lg p-3 sm:p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #50504f' }}>
+                <label className="text-xs sm:text-sm font-medium block mb-2" style={{ color: '#50504f' }}>Kms Recorridos</label>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold" style={{ color: '#cf1b22' }}>
                   {metricsLoading ? '...' : `${dashboardMetrics.kmsRecorridos.toFixed(2)} km`}
                 </p>
               </div>
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 sm:p-4">
-                <label className="text-xs sm:text-sm text-indigo-700 font-medium block mb-2">Km/Galon (Indicador Principal)</label>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-indigo-900">
+              <div className="rounded-lg p-3 sm:p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #50504f' }}>
+                <label className="text-xs sm:text-sm font-medium block mb-2" style={{ color: '#50504f' }}>Km/Galon (Indicador Principal)</label>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold" style={{ color: '#cf1b22' }}>
                   {metricsLoading ? '...' : `${dashboardMetrics.kmPerGallon.toFixed(2)} km/gal`}
                 </p>
               </div>
@@ -184,7 +184,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Comparación KPG por Vehículo */}
         <Card>
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 sm:p-4">
+          <CardHeader className="bg-gradient-to-r text-white p-3 sm:p-4" style={{ background: 'linear-gradient(to right, #cf1b22, #cf1b22)' }}>
             <h2 className="text-base sm:text-lg md:text-xl font-semibold">📊 Comparación KPG: Real vs Fábrica</h2>
           </CardHeader>
           <CardBody className="p-0 overflow-x-auto">

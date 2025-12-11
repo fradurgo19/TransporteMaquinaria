@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { Delivery, DeliveryTracking } from '../types';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
+import { ensureActiveSession } from '../services/sessionManager';
 
 interface DeliveriesQueryParams {
   page?: number;
@@ -18,6 +20,13 @@ export const useDeliveries = (params: DeliveriesQueryParams = {}) => {
   return useQuery({
     queryKey: ['deliveries', page, limit, status, search],
     queryFn: async () => {
+      // Asegurar sesión activa antes de hacer la query (proactivo)
+      const hasActiveSession = await ensureActiveSession();
+      if (!hasActiveSession) {
+        console.error('❌ No hay sesión activa para cargar entregas');
+        throw new Error('No hay sesión activa');
+      }
+
       let query = supabase
         .from('deliveries')
         .select('*', { count: 'exact' })
@@ -36,22 +45,24 @@ export const useDeliveries = (params: DeliveriesQueryParams = {}) => {
       const to = from + limit - 1;
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
+      const result = await executeSupabaseQuery(() => query);
 
-      if (error) {
-        console.error('Error fetching deliveries:', error);
-        throw error;
+      if (result.error) {
+        console.error('Error fetching deliveries:', result.error);
+        throw result.error;
       }
 
       return {
-        data: data as Delivery[],
-        total: count || 0,
+        data: result.data as Delivery[],
+        total: result.count || 0,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages: Math.ceil((result.count || 0) / limit),
       };
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30 * 1000, // 30 segundos
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     gcTime: 5 * 60 * 1000,
   });
 };
@@ -63,14 +74,23 @@ export const useDeliveryTracking = (deliveryId: string) => {
   return useQuery({
     queryKey: ['delivery_tracking', deliveryId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('delivery_tracking')
-        .select('*')
-        .eq('delivery_id', deliveryId)
-        .order('created_at', { ascending: false });
+      // Asegurar sesión activa antes de hacer la query (proactivo)
+      const hasActiveSession = await ensureActiveSession();
+      if (!hasActiveSession) {
+        console.error('❌ No hay sesión activa para cargar tracking');
+        throw new Error('No hay sesión activa');
+      }
 
-      if (error) throw error;
-      return data as DeliveryTracking[];
+      const result = await executeSupabaseQuery(() =>
+        supabase
+          .from('delivery_tracking')
+          .select('*')
+          .eq('delivery_id', deliveryId)
+          .order('created_at', { ascending: false })
+      );
+
+      if (result.error) throw result.error;
+      return result.data as DeliveryTracking[];
     },
     enabled: !!deliveryId,
     staleTime: 30 * 1000,

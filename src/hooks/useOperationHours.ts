@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, QUERY_LIMITS } from '../services/supabase';
 import { executeSupabaseQuery } from '../services/supabaseInterceptor';
+import { ensureActiveSession } from '../services/sessionManager';
 
 interface OperationHour {
   id: string;
@@ -33,13 +34,26 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
   return useQuery({
     queryKey: ['operation_hours', vehiclePlate, page, limit, status],
     queryFn: async () => {
-      console.log(`📋 Cargando operation hours - Placa: ${vehiclePlate || 'TODAS'}, Página: ${page}`);
-      
-      // Construir query
-      let query = supabase
-        .from('operation_hours')
-        .select('*', { count: 'exact' })
-        .order('check_in_time', { ascending: false });
+      // Timeout para evitar que la query se quede colgada
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout: La consulta tardó demasiado')), 30000)
+      );
+
+      const queryPromise = (async () => {
+        // Asegurar sesión activa antes de hacer la query (proactivo)
+        const hasActiveSession = await ensureActiveSession();
+        if (!hasActiveSession) {
+          console.error('❌ No hay sesión activa para cargar operation hours');
+          throw new Error('No hay sesión activa');
+        }
+
+        console.log(`📋 Cargando operation hours - Placa: ${vehiclePlate || 'TODAS'}, Página: ${page}`);
+        
+        // Construir query
+        let query = supabase
+          .from('operation_hours')
+          .select('*', { count: 'exact' })
+          .order('check_in_time', { ascending: false });
 
       // Filtrar por placa si se proporciona
       if (vehiclePlate) {
@@ -71,25 +85,35 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
 
       console.log(`✅ Operation hours cargadas: ${data.length} registros (Total: ${count})`);
 
-      return {
-        data,
-        total: count,
-        page,
-        limit,
-        totalPages: Math.ceil(count / limit),
-      };
+        return {
+          data,
+          total: count,
+          page,
+          limit,
+          totalPages: Math.ceil(count / limit),
+        };
+      })();
+
+      // Ejecutar con timeout
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<{
+        data: OperationHour[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }>;
     },
     enabled: true, // Siempre ejecutar (admins ven todo, usuarios solo su vehículo)
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
+    staleTime: 30 * 1000, // 30 segundos (datos más frescos)
+    gcTime: 5 * 60 * 1000, // 5 minutos
     refetchOnMount: true,
-    refetchOnWindowFocus: false, // Ya está desactivado globalmente
+    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
+    refetchOnReconnect: true,
+    refetchInterval: false, // No hacer polling automático
     retry: (failureCount, error: any) => {
       // Reintentar hasta 2 veces
       return failureCount < 2;
     },
-    // Remover polling automático - solo refrescar cuando sea necesario
-    // refetchInterval: 10 * 1000, // Comentado para evitar carga constante
   });
 };
 

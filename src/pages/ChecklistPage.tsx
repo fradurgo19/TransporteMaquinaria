@@ -107,7 +107,7 @@ export const ChecklistPage: React.FC = () => {
 
         {showForm && (
           <Card className="max-w-3xl mx-auto">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+            <CardHeader className="bg-gradient-to-r text-white" style={{ background: 'linear-gradient(to right, #cf1b22, #cf1b22)' }}>
               <h2 className="text-lg font-semibold flex items-center">
                 <ClipboardCheck className="h-5 w-5 mr-2" />
                 Inspección Pre-Operacional
@@ -197,27 +197,27 @@ export const ChecklistPage: React.FC = () => {
                 }
               }}>
                 {/* Información del Equipo (Compacta) */}
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600 rounded-r-lg p-2 sm:p-3 mb-4">
+                <div className="border-l-4 rounded-r-lg p-2 sm:p-3 mb-4" style={{ backgroundColor: '#FFFFFF', borderLeftColor: '#cf1b22', border: '1px solid #50504f' }}>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div>
-                      <label className="text-xs text-blue-700 font-medium block mb-1">Vehículo</label>
-                      <p className="text-sm font-semibold text-blue-900">{selectedEquipment?.license_plate}</p>
+                      <label className="text-xs font-medium block mb-1" style={{ color: '#50504f' }}>Vehículo</label>
+                      <p className="text-sm font-semibold" style={{ color: '#cf1b22' }}>{selectedEquipment?.license_plate}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-blue-700 font-medium block mb-1">Conductor</label>
-                      <p className="text-sm font-semibold text-blue-900">{user?.full_name || user?.username}</p>
+                      <label className="text-xs font-medium block mb-1" style={{ color: '#50504f' }}>Conductor</label>
+                      <p className="text-sm font-semibold" style={{ color: '#50504f' }}>{user?.full_name || user?.username}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-blue-700 font-medium block mb-1">Fecha</label>
-                      <p className="text-sm font-semibold text-blue-900">{format(new Date(), 'dd/MM/yyyy')}</p>
+                      <label className="text-xs font-medium block mb-1" style={{ color: '#50504f' }}>Fecha</label>
+                      <p className="text-sm font-semibold" style={{ color: '#50504f' }}>{format(new Date(), 'dd/MM/yyyy')}</p>
                     </div>
                   </div>
                   {/* GPS compacto */}
-                  <div className="mt-2 pt-2 border-t border-blue-200 flex items-center justify-between">
+                  <div className="mt-2 pt-2 flex items-center justify-between" style={{ borderTop: '1px solid #50504f' }}>
                     <div className="flex items-center text-xs">
                       <MapPin className={`h-3 w-3 mr-1 ${latitude && longitude ? 'text-green-600' : 'text-yellow-600'}`} />
                       {geoLoading ? (
-                        <span className="text-gray-600">Obteniendo ubicación...</span>
+                        <span style={{ color: '#50504f' }}>Obteniendo ubicación...</span>
                       ) : latitude && longitude ? (
                         <span className="text-green-700">
                           GPS: {latitude.toFixed(4)}, {longitude.toFixed(4)}
@@ -230,7 +230,8 @@ export const ChecklistPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={refreshLocation}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        className="text-xs font-medium hover:opacity-80"
+                        style={{ color: '#cf1b22' }}
                       >
                         Actualizar
                       </button>
@@ -345,7 +346,7 @@ export const ChecklistPage: React.FC = () => {
                   </div>
 
                   {photoPreview && (
-                    <div className="relative border-2 border-blue-200 rounded-lg p-2 bg-gray-50">
+                    <div className="relative border-2 rounded-lg p-2" style={{ borderColor: '#cf1b22', backgroundColor: '#FFFFFF' }}>
                       <img 
                         src={photoPreview} 
                         alt="Preview" 
@@ -357,7 +358,8 @@ export const ChecklistPage: React.FC = () => {
                           setPhoto(null);
                           setPhotoPreview('');
                         }}
-                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                        className="absolute top-2 right-2 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:opacity-90"
+                        style={{ backgroundColor: '#cf1b22' }}
                       >
                         ×
                       </button>
@@ -365,34 +367,37 @@ export const ChecklistPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="bg-blue-50 border-l-4 border-blue-600 rounded-r-lg p-3">
+                <div className="border-l-4 rounded-r-lg p-3" style={{ backgroundColor: '#FFFFFF', borderLeftColor: '#cf1b22', border: '1px solid #50504f' }}>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.passed}
                       onChange={(e) => setFormData({ ...formData, passed: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                      className="w-4 h-4 rounded focus:ring-2 border-gray-300"
+                      style={{ accentColor: '#cf1b22' }}
                     />
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium" style={{ color: '#50504f' }}>
                       Vehículo en condiciones de operar
                     </span>
                   </label>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+                <div className="flex justify-end gap-2 pt-2" style={{ borderTop: '1px solid #50504f' }}>
                   <Button 
                     type="button" 
                     variant="secondary" 
                     size="sm"
                     onClick={() => setShowForm(false)} 
                     disabled={isUploading}
+                    style={{ backgroundColor: '#50504f', color: '#FFFFFF' }}
                   >
                     Cancelar
                   </Button>
                   <Button 
                     type="submit" 
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="text-white hover:opacity-90"
+                    style={{ backgroundColor: '#cf1b22' }}
                     disabled={isUploading}
                   >
                     {isUploading ? (

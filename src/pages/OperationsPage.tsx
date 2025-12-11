@@ -492,21 +492,21 @@ export const OperationsPage: React.FC = () => {
 
         {showForm && (
           <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold text-gray-900">Nueva Operación</h2>
+            <CardHeader style={{ background: 'linear-gradient(to right, #cf1b22, #cf1b22)' }} className="text-white">
+              <h2 className="text-xl font-semibold">Nueva Operación</h2>
             </CardHeader>
             <CardBody>
               {/* Información del Equipo */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <h3 className="text-sm font-semibold text-blue-900 mb-3">Equipo Seleccionado</h3>
+              <div className="rounded-lg p-4 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #50504f' }}>
+                  <h3 className="text-sm font-semibold mb-3" style={{ color: '#50504f' }}>Equipo Seleccionado</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-blue-700 font-medium">Placa del Vehículo</label>
-                    <p className="text-lg font-bold text-blue-900">{selectedEquipment?.license_plate || 'No seleccionado'}</p>
+                      <label className="text-xs font-medium" style={{ color: '#50504f' }}>Placa del Vehículo</label>
+                    <p className="text-lg font-bold" style={{ color: '#cf1b22' }}>{selectedEquipment?.license_plate || 'No seleccionado'}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-blue-700 font-medium">Conductor</label>
-                    <p className="text-lg font-bold text-blue-900">{user?.full_name || user?.username || 'N/A'}</p>
+                    <label className="text-xs font-medium" style={{ color: '#50504f' }}>Conductor</label>
+                    <p className="text-lg font-bold" style={{ color: '#50504f' }}>{user?.full_name || user?.username || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -707,7 +707,8 @@ export const OperationsPage: React.FC = () => {
                   <Button
                     onClick={() => saveStep('loading')}
                     disabled={isUploading || !loadingData.equipmentSerial || !loadingData.origin || !loadingData.photo}
-                    className="w-full"
+                    className="w-full text-white hover:opacity-90"
+                    style={{ backgroundColor: '#cf1b22' }}
                   >
                     {isUploading ? (
                       <>
@@ -782,7 +783,8 @@ export const OperationsPage: React.FC = () => {
                   <Button
                     onClick={() => saveStep('route_start')}
                     disabled={isUploading || !routeStartData.destination || !routeStartData.photo}
-                    className="w-full"
+                    className="w-full text-white hover:opacity-90"
+                    style={{ backgroundColor: '#cf1b22' }}
                   >
                     {isUploading ? (
                       <>
@@ -862,7 +864,8 @@ export const OperationsPage: React.FC = () => {
                   <Button
                     onClick={() => saveStep('delivery')}
                     disabled={isUploading || !deliveryData.photo}
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="w-full text-white hover:opacity-90"
+                    style={{ backgroundColor: '#cf1b22' }}
                   >
                     {isUploading ? (
                       <>

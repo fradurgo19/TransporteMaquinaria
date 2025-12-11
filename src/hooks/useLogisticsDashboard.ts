@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { LogisticsDashboardMetrics } from '../types';
+import { executeSupabaseQuery } from '../services/supabaseInterceptor';
+import { ensureActiveSession } from '../services/sessionManager';
 
 /**
  * Hook para métricas del dashboard de logística
@@ -9,39 +11,54 @@ export const useLogisticsDashboard = () => {
   return useQuery({
     queryKey: ['logistics_dashboard', 'metrics'],
     queryFn: async (): Promise<LogisticsDashboardMetrics> => {
+      // Asegurar sesión activa antes de hacer las queries (proactivo)
+      const hasActiveSession = await ensureActiveSession();
+      if (!hasActiveSession) {
+        console.error('❌ No hay sesión activa para cargar métricas de logística');
+        throw new Error('No hay sesión activa');
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayISO = today.toISOString();
 
-      // Ejecutar consultas en paralelo
+      // Ejecutar consultas en paralelo con interceptor
       const [totalResult, pendingResult, deliveredTodayResult, vehiclesResult] = await Promise.all([
         // Total de entregas
-        supabase
-          .from('deliveries')
-          .select('id', { count: 'exact', head: true })
-          .eq('department', 'logistics'),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('deliveries')
+            .select('id', { count: 'exact', head: true })
+            .eq('department', 'logistics')
+        ),
 
         // Entregas pendientes
-        supabase
-          .from('deliveries')
-          .select('id', { count: 'exact', head: true })
-          .eq('department', 'logistics')
-          .in('status', ['pending', 'assigned', 'in_transit']),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('deliveries')
+            .select('id', { count: 'exact', head: true })
+            .eq('department', 'logistics')
+            .in('status', ['pending', 'assigned', 'in_transit'])
+        ),
 
         // Entregadas hoy
-        supabase
-          .from('deliveries')
-          .select('id', { count: 'exact', head: true })
-          .eq('department', 'logistics')
-          .eq('status', 'delivered')
-          .gte('delivery_date', todayISO),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('deliveries')
+            .select('id', { count: 'exact', head: true })
+            .eq('department', 'logistics')
+            .eq('status', 'delivered')
+            .gte('delivery_date', todayISO)
+        ),
 
         // Vehículos activos de logística
-        supabase
-          .from('equipment')
-          .select('id', { count: 'exact', head: true })
-          .eq('department', 'logistics')
-          .eq('status', 'active'),
+        executeSupabaseQuery(() =>
+          supabase
+            .from('equipment')
+            .select('id', { count: 'exact', head: true })
+            .eq('department', 'logistics')
+            .eq('status', 'active')
+        ),
       ]);
 
       const totalDeliveries = totalResult.count || 0;
@@ -50,15 +67,18 @@ export const useLogisticsDashboard = () => {
       const activeVehicles = vehiclesResult.count || 0;
 
       // Calcular tiempo promedio de entrega (últimas 30 entregas completadas)
-      const { data: completedDeliveries } = await supabase
-        .from('deliveries')
-        .select('pickup_date, delivery_date')
-        .eq('department', 'logistics')
-        .eq('status', 'delivered')
-        .not('pickup_date', 'is', null)
-        .not('delivery_date', 'is', null)
-        .order('delivery_date', { ascending: false })
-        .limit(30);
+      const completedResult = await executeSupabaseQuery(() =>
+        supabase
+          .from('deliveries')
+          .select('pickup_date, delivery_date')
+          .eq('department', 'logistics')
+          .eq('status', 'delivered')
+          .not('pickup_date', 'is', null)
+          .not('delivery_date', 'is', null)
+          .order('delivery_date', { ascending: false })
+          .limit(30)
+      );
+      const completedDeliveries = completedResult.data;
 
       let averageDeliveryTime = 0;
       if (completedDeliveries && completedDeliveries.length > 0) {
@@ -78,7 +98,9 @@ export const useLogisticsDashboard = () => {
         averageDeliveryTime,
       };
     },
-    staleTime: 2 * 60 * 1000, // 2 minutos
+    staleTime: 30 * 1000, // 30 segundos
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     gcTime: 5 * 60 * 1000,
   });
 };
@@ -90,15 +112,24 @@ export const useRecentDeliveries = () => {
   return useQuery({
     queryKey: ['logistics_dashboard', 'recent_deliveries'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('deliveries')
-        .select('id, tracking_number, customer_name, status, created_at')
-        .eq('department', 'logistics')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      // Asegurar sesión activa antes de hacer la query (proactivo)
+      const hasActiveSession = await ensureActiveSession();
+      if (!hasActiveSession) {
+        console.error('❌ No hay sesión activa para cargar entregas recientes');
+        throw new Error('No hay sesión activa');
+      }
 
-      if (error) throw error;
-      return data;
+      const result = await executeSupabaseQuery(() =>
+        supabase
+          .from('deliveries')
+          .select('id, tracking_number, customer_name, status, created_at')
+          .eq('department', 'logistics')
+          .order('created_at', { ascending: false })
+          .limit(5)
+      );
+
+      if (result.error) throw result.error;
+      return result.data;
     },
     staleTime: 1 * 60 * 1000,
   });

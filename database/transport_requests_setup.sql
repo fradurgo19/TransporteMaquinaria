@@ -363,6 +363,18 @@ CREATE POLICY "Admins can update machines"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can delete machines" ON machines;
+CREATE POLICY "Admins can delete machines"
+  ON machines FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.role IN ('admin', 'admin_logistics')
+    )
+  );
+
 -- Solicitudes: comerciales pueden crear y ver las suyas, admins ven todas
 DROP POLICY IF EXISTS "Users can view their own requests" ON transport_requests;
 CREATE POLICY "Users can view their own requests"

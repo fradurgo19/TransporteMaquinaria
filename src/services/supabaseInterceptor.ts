@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { ensureActiveSession } from './sessionManager';
 
 /**
  * Interceptor global para Supabase que maneja automáticamente:
@@ -107,18 +108,17 @@ export const executeSupabaseQuery = async <T>(
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Verificar sesión antes de ejecutar
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      // Si hay error al obtener la sesión o no hay sesión, intentar refrescar
-      if ((sessionError || !session) && autoRefresh) {
-        console.log('⚠️ No hay sesión activa o error al obtener sesión, intentando refrescar...');
-        const refreshed = await refreshSession();
-        if (!refreshed) {
-          // Si no se pudo refrescar, verificar si hay una sesión válida después del intento
-          const { data: { session: newSession } } = await supabase.auth.getSession();
-          if (!newSession) {
-            throw new Error('No hay sesión activa y no se pudo refrescar');
+      // Asegurar sesión activa antes de ejecutar (proactivo)
+      if (autoRefresh) {
+        const hasActiveSession = await ensureActiveSession();
+        if (!hasActiveSession) {
+          console.log('⚠️ No se pudo asegurar sesión activa, intentando refrescar...');
+          const refreshed = await refreshSession();
+          if (!refreshed) {
+            const { data: { session: newSession } } = await supabase.auth.getSession();
+            if (!newSession) {
+              throw new Error('No hay sesión activa y no se pudo refrescar');
+            }
           }
         }
       }

@@ -4,7 +4,7 @@ import { supabase } from './supabase';
  * Servicio para subir archivos a Supabase Storage
  */
 
-export type BucketType = 'fuel-receipts' | 'operation-photos' | 'checklist-photos';
+export type BucketType = 'fuel-receipts' | 'operation-photos' | 'checklist-photos' | 'runt-images';
 
 /**
  * Subir archivo a Supabase Storage
@@ -25,7 +25,7 @@ export const uploadFile = async (
     console.log(`📤 Subiendo archivo a ${bucket}/${filePath}...`);
 
     // Subir archivo
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',

@@ -114,6 +114,7 @@ export const FuelPage: React.FC = () => {
         
         return {
           ...prev,
+          vehiclePlate: result.vehiclePlate || prev.vehiclePlate,
           gallons: gallons,
           cost: cost,
           pricePerGallon: pricePerGallon,
@@ -130,12 +131,48 @@ export const FuelPage: React.FC = () => {
 
   const formatDateFromOCR = (dateStr: string): string => {
     try {
-      const parts = dateStr.split(/[-/]/);
+      // Limpiar la fecha (puede tener espacios o caracteres extra)
+      const cleanDate = dateStr.trim().replace(/\s+/g, '');
+      const parts = cleanDate.split(/[-/]/);
+      
       if (parts.length === 3) {
-        const [day, month, year] = parts;
+        let year, month, day;
+        
+        // Detectar formato YYYY/MM/DD o YYYY-MM-DD
+        if (parts[0].length === 4) {
+          // Formato: YYYY/MM/DD
+          [year, month, day] = parts;
+        } else {
+          // Formato: DD/MM/YYYY o MM/DD/YYYY
+          // Intentar ambos formatos
+          const firstNum = parseInt(parts[0]);
+          const secondNum = parseInt(parts[1]);
+          
+          if (firstNum > 12) {
+            // DD/MM/YYYY
+            [day, month, year] = parts;
+          } else if (secondNum > 12) {
+            // MM/DD/YYYY
+            [month, day, year] = parts;
+          } else {
+            // Asumir DD/MM/YYYY (formato más común en Colombia)
+            [day, month, year] = parts;
+          }
+        }
+        
+        // Normalizar año
         const fullYear = year.length === 2 ? `20${year}` : year;
-        return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        
+        // Validar y formatear
+        const yearNum = parseInt(fullYear);
+        const monthNum = parseInt(month);
+        const dayNum = parseInt(day);
+        
+        if (yearNum >= 2000 && yearNum <= 2100 && monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+          return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
       }
+      
       return format(new Date(), 'yyyy-MM-dd');
     } catch {
       return format(new Date(), 'yyyy-MM-dd');
@@ -353,7 +390,7 @@ export const FuelPage: React.FC = () => {
 
         {showForm && (
           <Card className="max-w-2xl mx-auto">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 sm:p-4">
+            <CardHeader className="bg-gradient-to-r text-white p-3 sm:p-4" style={{ background: 'linear-gradient(to right, #cf1b22, #cf1b22)' }}>
               <h2 className="text-base sm:text-lg font-semibold flex items-center">
                 <FuelIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Registrar Combustible
@@ -368,14 +405,15 @@ export const FuelPage: React.FC = () => {
                   </label>
                   
                   {receiptPreview ? (
-                    <div className="relative border-2 border-blue-300 rounded-lg p-2 bg-blue-50">
+                    <div className="relative border-2 rounded-lg p-2" style={{ borderColor: '#cf1b22', backgroundColor: '#FFFFFF' }}>
                       <button
                         type="button"
                         onClick={() => {
                           setReceipt(null);
                           setReceiptPreview('');
                         }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10"
+                        className="absolute top-2 right-2 rounded-full p-1 z-10 text-white hover:opacity-90"
+                        style={{ backgroundColor: '#cf1b22' }}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -386,7 +424,7 @@ export const FuelPage: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 bg-blue-50 text-center">
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: '#cf1b22', backgroundColor: '#FFFFFF' }}>
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -395,13 +433,14 @@ export const FuelPage: React.FC = () => {
                         onChange={handlePhotoCapture}
                         className="hidden"
                       />
-                      <Camera className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <Camera className="h-8 w-8 mx-auto mb-2" style={{ color: '#cf1b22' }} />
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
                         onClick={() => fileInputRef.current?.click()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="text-white hover:opacity-90"
+                        style={{ backgroundColor: '#cf1b22' }}
                       >
                         <Camera className="h-4 w-4 mr-2" />
                         Tomar/Subir Foto
@@ -415,7 +454,8 @@ export const FuelPage: React.FC = () => {
                       onClick={processReceiptOCR}
                       disabled={isProcessing}
                       size="sm"
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                      className="w-full text-white hover:opacity-90"
+                      style={{ backgroundColor: '#cf1b22' }}
                     >
                       {isProcessing ? (
                         <>
@@ -432,17 +472,17 @@ export const FuelPage: React.FC = () => {
                   )}
 
                   {isProcessing && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                    <div className="rounded-lg p-2" style={{ backgroundColor: '#FFFFFF', border: '1px solid #50504f' }}>
                       <div className="flex items-center gap-2">
-                        <Loader className="h-4 w-4 text-blue-600 animate-spin" />
-                        <span className="text-xs text-blue-700">
+                        <Loader className="h-4 w-4 animate-spin" style={{ color: '#cf1b22' }} />
+                        <span className="text-xs" style={{ color: '#50504f' }}>
                           Procesando recibo con OCR... {progress}%
                         </span>
                       </div>
-                      <div className="mt-1 bg-blue-200 rounded-full h-1.5">
+                      <div className="mt-1 rounded-full h-1.5" style={{ backgroundColor: '#50504f' }}>
                         <div 
-                          className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
+                          className="h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${progress}%`, backgroundColor: '#cf1b22' }}
                         />
                       </div>
                     </div>
@@ -450,15 +490,15 @@ export const FuelPage: React.FC = () => {
                 </div>
 
                 {/* Información del Equipo */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                <div className="rounded-lg p-2 sm:p-3" style={{ backgroundColor: '#FFFFFF', border: '1px solid #50504f' }}>
                   <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                     <div>
-                      <span className="text-[10px] sm:text-xs text-blue-700 font-medium">Placa:</span>
-                      <p className="font-bold text-blue-900 text-sm sm:text-base">{selectedEquipment?.license_plate || 'No seleccionado'}</p>
+                      <span className="text-[10px] sm:text-xs font-medium" style={{ color: '#50504f' }}>Placa:</span>
+                      <p className="font-bold text-sm sm:text-base" style={{ color: '#cf1b22' }}>{selectedEquipment?.license_plate || 'No seleccionado'}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] sm:text-xs text-blue-700 font-medium">Marca:</span>
-                      <p className="text-blue-800 text-sm sm:text-base">{selectedEquipment?.brand || '-'}</p>
+                      <span className="text-[10px] sm:text-xs font-medium" style={{ color: '#50504f' }}>Marca:</span>
+                      <p className="text-sm sm:text-base" style={{ color: '#50504f' }}>{selectedEquipment?.brand || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -530,10 +570,10 @@ export const FuelPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setShowForm(false)} disabled={isUploading} className="w-full sm:w-auto">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setShowForm(false)} disabled={isUploading} className="w-full sm:w-auto" style={{ backgroundColor: '#50504f', color: '#FFFFFF' }}>
                     Cancelar
                   </Button>
-                  <Button type="submit" size="sm" disabled={isUploading || !formData.gallons || !formData.cost} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700">
+                  <Button type="submit" size="sm" disabled={isUploading || !formData.gallons || !formData.cost} className="w-full sm:w-auto text-white hover:opacity-90" style={{ backgroundColor: '#cf1b22' }}>
                     {isUploading ? (
                       <>
                         <Loader className="h-4 w-4 mr-2 animate-spin" />

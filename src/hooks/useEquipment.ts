@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, EQUIPMENT_LIST_FIELDS, EQUIPMENT_FULL_FIELDS, QUERY_LIMITS } from '../services/supabase';
 import { useDepartment } from './useDepartment';
 import { executeSupabaseQuery } from '../services/supabaseInterceptor';
+import { ensureActiveSession } from '../services/sessionManager';
 
 interface Equipment {
   id: string;
@@ -39,19 +40,25 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
   return useQuery({
     queryKey: ['equipment', department, page, limit, status, search, useFullFields],
     queryFn: async () => {
-      // Verificar sesión antes de hacer la query
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('❌ No hay sesión activa para cargar equipos');
-        throw new Error('No hay sesión activa');
-      }
+      // Timeout para evitar que la query se quede colgada
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout: La consulta tardó demasiado')), 30000)
+      );
 
-      if (!department) {
-        console.error('❌ Departamento no disponible para cargar equipos');
-        throw new Error('Departamento no disponible');
-      }
+      const queryPromise = (async () => {
+        // Asegurar sesión activa antes de hacer la query (proactivo)
+        const hasActiveSession = await ensureActiveSession();
+        if (!hasActiveSession) {
+          console.error('❌ No hay sesión activa para cargar equipos');
+          throw new Error('No hay sesión activa');
+        }
 
-      console.log(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
+        if (!department) {
+          console.error('❌ Departamento no disponible para cargar equipos');
+          throw new Error('Departamento no disponible');
+        }
+
+        console.log(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
 
       // Construir query
       let query = supabase
@@ -88,21 +95,32 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
       const equipmentList = (responseData?.data || responseData || []) as Equipment[];
       const totalCount = responseData?.count || 0;
 
-      return {
-        data: equipmentList,
-        total: totalCount,
-        page,
-        limit,
-        totalPages: Math.ceil(totalCount / limit),
-      };
+        return {
+          data: equipmentList,
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit),
+        };
+      })();
+
+      // Ejecutar con timeout
+      return Promise.race([queryPromise, timeoutPromise]) as Promise<{
+        data: Equipment[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }>;
     },
     enabled: !departmentLoading && !!department, // Solo ejecutar si department está listo
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
-    refetchOnWindowFocus: false, // No refrescar en focus (ya está desactivado globalmente)
+    staleTime: 30 * 1000, // 30 segundos (datos más frescos)
+    gcTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
     refetchOnMount: true, // Refrescar al montar si está stale
+    refetchInterval: false, // No hacer polling automático
     retry: (failureCount, error: any) => {
-      // No reintentar si es error de autenticación
+      // No reintentar si es error de autenticación (el interceptor lo maneja)
       if (error?.code === 'PGRST301' || error?.message?.includes('JWT') || error?.message?.includes('token')) {
         return false;
       }

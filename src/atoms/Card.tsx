@@ -23,10 +23,10 @@ export const Card = React.memo<CardProps>(({ children, className = '', hover = f
 
 Card.displayName = 'Card';
 
-export const CardHeader = React.memo<{ children: React.ReactNode; className?: string }>(
-  ({ children, className = '' }) => {
+export const CardHeader = React.memo<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }>(
+  ({ children, className = '', style }) => {
     return (
-      <div className={`px-6 py-4 border-b border-gray-200 ${className}`}>
+      <div className={`px-6 py-4 border-b border-gray-200 ${className}`} style={style}>
         {children}
       </div>
     );
