@@ -12,6 +12,7 @@ import { format, differenceInDays, parseISO } from 'date-fns';
 import { supabase } from '../services/supabase';
 import { useEquipment, useEquipmentMutation } from '../hooks/useEquipment';
 import { uploadFile, compressImage } from '../services/uploadService';
+import { useDepartment } from '../hooks/useDepartment';
 
 interface Equipment {
   id: string;
@@ -102,6 +103,7 @@ export const EquipmentPage: React.FC = () => {
   });
 
   const { createEquipment, updateEquipment } = useEquipmentMutation();
+  const { department } = useDepartment();
 
   const equipment = equipmentData?.data || [];
   const totalPages = equipmentData?.totalPages || 1;
@@ -280,7 +282,11 @@ export const EquipmentPage: React.FC = () => {
     }
 
     try {
-      await createEquipment.mutateAsync(newEquipment);
+      // Agregar el departamento del usuario al crear el equipo
+      await createEquipment.mutateAsync({
+        ...newEquipment,
+        department: department, // Asignar el departamento del usuario actual
+      });
       console.log('✅ Equipo creado exitosamente');
         // Resetear formulario
         setNewEquipment({

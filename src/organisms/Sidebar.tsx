@@ -88,19 +88,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggleC
       path: '/checklist',
       label: 'Checklist Pre-Op',
       icon: ClipboardCheck,
-      roles: ['admin', 'user'], // Operadores y admins
+      roles: ['admin', 'user', 'logistics', 'admin_logistics'], // Operadores, admins y logística
     },
     {
       path: '/transport-requests',
       label: 'Solicitudes Transporte',
       icon: FileText,
-      roles: ['admin', 'admin_logistics', 'commercial'], // Admin, admin logística y comercial
+      roles: ['admin', 'commercial'], // Solo admin de transporte y comercial (oculto para logística)
     },
     {
       path: '/machines-management',
       label: 'Gestión de Máquinas',
       icon: Package,
-      roles: ['admin', 'admin_logistics'], // Solo administradores
+      roles: ['admin'], // Solo admin de transporte (oculto para logística)
     },
     {
       path: '/manufacturer-kpg',

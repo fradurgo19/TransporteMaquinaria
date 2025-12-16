@@ -10,7 +10,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Helper para crear AbortController con timeout (compatible con navegadores más antiguos)
 const createTimeoutSignal = (timeoutMs: number): AbortSignal => {
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+  
+  // Limpiar timeout si el signal ya fue abortado
+  // Esto previene memory leaks
+  if (controller.signal.aborted) {
+    clearTimeout(timeoutId);
+  }
+  
   return controller.signal;
 };
 
@@ -30,26 +39,50 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     headers: {
       'x-client-info': 'transport-management-app',
     },
-    // Timeout para requests HTTP (30 segundos)
-    fetch: (url, options = {}) => {
-      const timeoutMs = 30000;
+    // Timeout para requests HTTP (15 segundos - más agresivo para evitar bloqueos)
+    // Mejorado con mejor manejo de abort y reconexión
+    fetch: async (url, options = {}) => {
+      const timeoutMs = 15000;
       
       // Si ya hay un signal, usarlo; si no, crear uno con timeout
       let signal = options.signal;
+      let timeoutController: AbortController | null = null;
+      
       if (!signal) {
-        signal = createTimeoutSignal(timeoutMs);
+        timeoutController = new AbortController();
+        signal = timeoutController.signal;
+        
+        // Configurar timeout
+        const timeoutId = setTimeout(() => {
+          if (timeoutController && !timeoutController.signal.aborted) {
+            timeoutController.abort();
+          }
+        }, timeoutMs);
+        
+        // Limpiar timeout cuando el signal se aborte
+        signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
       }
       
-      return fetch(url, {
-        ...options,
-        signal,
-      }).catch((error) => {
-        // Si es error de timeout, lanzar error más descriptivo
-        if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-          throw new Error(`Request timeout después de ${timeoutMs}ms`);
+      const fetchStartTime = Date.now();
+      
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal,
+        });
+        
+        return response;
+      } catch (error: any) {
+        // Si es error de timeout/abort, lanzar error más descriptivo
+        if (error.name === 'AbortError' || error.name === 'TimeoutError' || signal?.aborted) {
+          const error = new Error(`Request timeout después de ${timeoutMs}ms`);
+          (error as any).isTimeout = true;
+          throw error;
         }
         throw error;
-      });
+      }
     },
   },
   realtime: {

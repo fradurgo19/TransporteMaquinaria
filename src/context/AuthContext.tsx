@@ -563,11 +563,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('🚪 Iniciando logout...');
+      
+      // Cancelar todas las queries pendientes primero
+      // Esto se hace importando queryClient desde QueryProvider
+      try {
+        // Usar import dinámico para evitar dependencias circulares
+        const queryProviderModule = await import('../context/QueryProvider');
+        const queryClient = (queryProviderModule as any).queryClient;
+        if (queryClient) {
+          queryClient.cancelQueries();
+          queryClient.clear();
+          console.log('✅ Queries canceladas y cache limpiado');
+        }
+      } catch (importError) {
+        console.warn('⚠️ No se pudo cancelar queries (no crítico):', importError);
+      }
+
+      // Limpiar estado local PRIMERO (no depende de la conexión)
       setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
+      setHasActiveSession(false);
+      userSetRef.current = false;
+      fetchingProfileRef.current = false;
+      
+      // Limpiar localStorage de sesión
+      try {
+        localStorage.removeItem('sb-auth-token');
+        localStorage.removeItem('selectedEquipment');
+      } catch (storageError) {
+        console.warn('⚠️ Error limpiando localStorage (no crítico):', storageError);
+      }
+
+      // Intentar cerrar sesión en Supabase con timeout corto
+      // Si falla o timeout, no es crítico porque ya limpiamos el estado local
+      try {
+        await Promise.race([
+          supabase.auth.signOut(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Logout timeout')), 3000)
+          )
+        ]);
+        console.log('✅ Logout en Supabase completado');
+      } catch (error: any) {
+        // Si falla el logout en Supabase, no es crítico porque ya limpiamos el estado local
+        console.warn('⚠️ Error al cerrar sesión en Supabase (no crítico, estado local ya limpiado):', error?.message);
+      }
+      
+      console.log('✅ Logout completado exitosamente');
+    } catch (error: any) {
+      console.error('❌ Logout error:', error);
+      
+      // Aún así, limpiar el estado local aunque falle el signOut
+      setUser(null);
+      setHasActiveSession(false);
+      userSetRef.current = false;
+      fetchingProfileRef.current = false;
+      
+      // Limpiar localStorage de sesión
+      try {
+        localStorage.removeItem('sb-auth-token');
+        localStorage.removeItem('selectedEquipment');
+      } catch (storageError) {
+        console.warn('⚠️ Error limpiando localStorage (no crítico):', storageError);
+      }
+      
+      // No lanzar error - el logout siempre debe completarse limpiando el estado local
+      console.warn('⚠️ Logout completado (estado local limpiado, aunque hubo error en Supabase)');
     }
   };
 

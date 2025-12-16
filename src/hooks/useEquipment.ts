@@ -40,25 +40,12 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
   return useQuery({
     queryKey: ['equipment', department, page, limit, status, search, useFullFields],
     queryFn: async () => {
-      // Timeout para evitar que la query se quede colgada
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout: La consulta tardó demasiado')), 30000)
-      );
+      if (!department) {
+        console.error('❌ Departamento no disponible para cargar equipos');
+        throw new Error('Departamento no disponible');
+      }
 
-      const queryPromise = (async () => {
-        // Asegurar sesión activa antes de hacer la query (proactivo)
-        const hasActiveSession = await ensureActiveSession();
-        if (!hasActiveSession) {
-          console.error('❌ No hay sesión activa para cargar equipos');
-          throw new Error('No hay sesión activa');
-        }
-
-        if (!department) {
-          console.error('❌ Departamento no disponible para cargar equipos');
-          throw new Error('Departamento no disponible');
-        }
-
-        console.log(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
+      console.log(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
 
       // Construir query
       let query = supabase
@@ -81,8 +68,16 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
       const to = from + limit - 1;
       query = query.range(from, to);
 
-      // Ejecutar con interceptor (maneja auto-refresh automáticamente)
-      const result = await executeSupabaseQuery(async () => await query);
+      // Ejecutar con interceptor (maneja auto-refresh, timeouts y reconexión automáticamente)
+      // El interceptor ya maneja timeouts de 15s, no necesitamos timeout adicional
+      const result = await executeSupabaseQuery(
+        async () => await query,
+        {
+          timeout: 15000, // 15 segundos (mismo que el interceptor por defecto)
+          maxRetries: 2,
+          autoRefresh: true,
+        }
+      );
 
       if (result.error) {
         console.error('Error fetching equipment:', result.error);
@@ -95,37 +90,34 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
       const equipmentList = (responseData?.data || responseData || []) as Equipment[];
       const totalCount = responseData?.count || 0;
 
-        return {
-          data: equipmentList,
-          total: totalCount,
-          page,
-          limit,
-          totalPages: Math.ceil(totalCount / limit),
-        };
-      })();
-
-      // Ejecutar con timeout
-      return Promise.race([queryPromise, timeoutPromise]) as Promise<{
-        data: Equipment[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-      }>;
+      return {
+        data: equipmentList,
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+      };
     },
     enabled: !departmentLoading && !!department, // Solo ejecutar si department está listo
     staleTime: 30 * 1000, // 30 segundos (datos más frescos)
     gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: true, // Refrescar cuando la ventana recupera el foco
+    refetchOnWindowFocus: false, // Desactivado - QueryProvider maneja esto mejor
     refetchOnMount: true, // Refrescar al montar si está stale
+    refetchOnReconnect: true, // Refrescar cuando se reconecta la red
     refetchInterval: false, // No hacer polling automático
     retry: (failureCount, error: any) => {
-      // No reintentar si es error de autenticación (el interceptor lo maneja)
-      if (error?.code === 'PGRST301' || error?.message?.includes('JWT') || error?.message?.includes('token')) {
+      // No reintentar si es error de autenticación o timeout (el interceptor ya lo maneja)
+      if (
+        error?.code === 'PGRST301' || 
+        error?.message?.includes('JWT') || 
+        error?.message?.includes('token') ||
+        error?.message?.includes('Timeout') ||
+        error?.message?.includes('No hay sesión activa')
+      ) {
         return false;
       }
-      // Reintentar hasta 2 veces para otros errores
-      return failureCount < 2;
+      // Reintentar hasta 1 vez para otros errores (el interceptor ya hace 2 reintentos)
+      return failureCount < 1;
     },
   });
 };

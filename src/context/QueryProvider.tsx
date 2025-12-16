@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { startSessionHeartbeat, stopSessionHeartbeat, refreshSessionIfNeeded } from '../services/sessionManager';
+import { forceConnectionValidation } from '../services/connectionManager';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,8 +52,8 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
 
     let hiddenTime: number | null = null;
     let lastInvalidationTime = 0;
-    const MIN_HIDDEN_TIME = 1 * 60 * 1000; // Mínimo 1 minuto oculta para refrescar (más agresivo)
-    const INVALIDATION_COOLDOWN = 10 * 1000; // 10 segundos mínimo entre invalidaciones (más frecuente)
+    const MIN_HIDDEN_TIME = 30 * 1000; // Mínimo 30 segundos oculta para refrescar
+    const INVALIDATION_COOLDOWN = 5 * 1000; // 5 segundos mínimo entre invalidaciones
 
     // Listener para detectar cuando la app vuelve a estar visible después de estar oculta
     const handleVisibilityChange = async () => {
@@ -61,33 +62,49 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
       if (document.visibilityState === 'hidden') {
         // Marcar el tiempo cuando se oculta
         hiddenTime = now;
-      } else if (document.visibilityState === 'visible' && hiddenTime !== null) {
-        // Calcular cuánto tiempo estuvo oculta
-        const timeHidden = now - hiddenTime;
-        
-        // Solo refrescar si estuvo oculta por más de 1 minuto Y han pasado al menos 10 segundos desde la última invalidación
-        if (timeHidden > MIN_HIDDEN_TIME && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-          console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, refrescando datos...`);
+      } else if (document.visibilityState === 'visible') {
+        // Si estaba oculta, calcular tiempo
+        if (hiddenTime !== null) {
+          const timeHidden = now - hiddenTime;
           
-          lastInvalidationTime = now;
+          // Solo refrescar si estuvo oculta por más de 30 segundos Y han pasado al menos 5 segundos desde la última invalidación
+          if (timeHidden > MIN_HIDDEN_TIME && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
+            console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, validando conexión y refrescando datos...`);
+            
+            lastInvalidationTime = now;
+            
+            // Intentar validar conexión en background (no bloqueante)
+            forceConnectionValidation().catch(() => {
+              // Ignorar errores de validación en background
+            });
+            
+            // Refrescar sesión después de validar conexión
+            refreshSessionIfNeeded().catch(() => {
+              // Ignorar errores de refresh en background
+            });
+            
+            // Refrescar queries activas después de un pequeño delay para dar tiempo al refresh de sesión
+            setTimeout(() => {
+              queryClient.refetchQueries({ 
+                type: 'active',
+                predicate: (query) => {
+                  const dataAge = Date.now() - (query.state.dataUpdatedAt || 0);
+                  return dataAge > MIN_HIDDEN_TIME;
+                }
+              });
+            }, 500);
+          }
           
-          // Refrescar queries directamente sin verificar sesión primero
-          // Si hay problemas de sesión, las queries lo manejarán automáticamente
-          queryClient.refetchQueries({ 
-            type: 'active',
-            predicate: (query) => {
-              const dataAge = now - (query.state.dataUpdatedAt || 0);
-              return dataAge > MIN_HIDDEN_TIME;
-            }
+          hiddenTime = null;
+        } else {
+          // Si no estaba oculta pero la app vuelve a estar visible, validar conexión y refrescar sesión
+          forceConnectionValidation().catch(() => {
+            // Ignorar errores
           });
-          
-          // Refrescar sesión en background (no bloqueante)
           refreshSessionIfNeeded().catch(() => {
-            // Ignorar errores de refresh en background
+            // Ignorar errores
           });
         }
-        
-        hiddenTime = null;
       }
     };
 
@@ -100,19 +117,22 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         // Cuando se renueva el token o se inicia sesión, invalidar todas las queries
-        // pero solo si han pasado al menos 10 segundos desde la última invalidación
+        // pero solo si han pasado al menos 5 segundos desde la última invalidación
         const now = Date.now();
         if ((now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
           console.log('🔄 Sesión renovada, invalidando y refrescando queries...');
           lastInvalidationTime = now;
           // Invalidar todas las queries y refrescar las activas
           queryClient.invalidateQueries();
-          // Refrescar inmediatamente las queries activas
-          queryClient.refetchQueries({ type: 'active' });
+          // Refrescar inmediatamente las queries activas después de un pequeño delay
+          setTimeout(() => {
+            queryClient.refetchQueries({ type: 'active' });
+          }, 300);
         }
       } else if (event === 'SIGNED_OUT') {
         // Limpiar todas las queries cuando se cierra sesión
         console.log('🚪 Sesión cerrada, limpiando queries...');
+        queryClient.cancelQueries();
         queryClient.clear();
         stopSessionHeartbeat();
       }

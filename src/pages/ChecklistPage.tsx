@@ -14,11 +14,13 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { format } from 'date-fns';
 import { uploadFile, compressImage } from '../services/uploadService';
 import { supabase } from '../services/supabase';
+import { useDepartment } from '../hooks/useDepartment';
 
 export const ChecklistPage: React.FC = () => {
-  useProtectedRoute(['admin', 'user']);
+  useProtectedRoute(['admin', 'user', 'logistics', 'admin_logistics']);
   const { user } = useAuth();
   const { selectedEquipment } = useEquipment();
+  const { department } = useDepartment();
   const { latitude, longitude, error: geoError, isLoading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const [showForm, setShowForm] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -40,16 +42,47 @@ export const ChecklistPage: React.FC = () => {
     passed: true,
   });
 
-  const mockChecklists = [
-    {
-      id: '1',
-      vehiclePlate: 'ABC-123',
-      driverName: 'Juan Pérez',
-      checkDate: '2025-11-04',
-      passed: true,
-      assessment: 'Vehículo en excelentes condiciones',
-    },
-  ];
+  // Cargar checklists desde Supabase filtrados por departamento
+  const [checklists, setChecklists] = React.useState<any[]>([]);
+  const [isLoadingChecklists, setIsLoadingChecklists] = React.useState(true);
+
+  React.useEffect(() => {
+    const loadChecklists = async () => {
+      if (!department) return;
+      
+      setIsLoadingChecklists(true);
+      try {
+        const { data, error } = await supabase
+          .from('pre_operational_checklists')
+          .select('*')
+          .eq('department', department)
+          .order('check_date', { ascending: false })
+          .limit(100);
+
+        if (error) {
+          console.error('Error cargando checklists:', error);
+        } else {
+          setChecklists(data || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoadingChecklists(false);
+      }
+    };
+
+    loadChecklists();
+  }, [department]);
+
+  // Mapear checklists de Supabase al formato esperado
+  const mappedChecklists = checklists.map((checklist) => ({
+    id: checklist.id,
+    vehiclePlate: checklist.vehicle_plate,
+    driverName: checklist.driver_name,
+    checkDate: checklist.check_date,
+    passed: checklist.passed,
+    assessment: checklist.vehicle_condition_assessment || '',
+  }));
 
   const columns = [
     { key: 'vehiclePlate', label: 'Vehículo', sortable: true },
@@ -160,7 +193,7 @@ export const ChecklistPage: React.FC = () => {
                       location_latitude: latitude || 4.6097,
                       location_longitude: longitude || -74.0817,
                       created_by: user.id,
-                      department: 'transport',
+                      department: department, // Usar el departamento del usuario actual
                     }])
                     .select();
 
@@ -172,6 +205,18 @@ export const ChecklistPage: React.FC = () => {
 
                   console.log('✅ Checklist guardado:', data);
                   alert('✅ Checklist registrado exitosamente');
+                  
+                  // Recargar lista de checklists
+                  const { data: updatedChecklists, error: reloadError } = await supabase
+                    .from('pre_operational_checklists')
+                    .select('*')
+                    .eq('department', department)
+                    .order('check_date', { ascending: false })
+                    .limit(100);
+                  
+                  if (!reloadError && updatedChecklists) {
+                    setChecklists(updatedChecklists);
+                  }
                   
                   // Limpiar
                   setFormData({
@@ -420,11 +465,18 @@ export const ChecklistPage: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-900">Historial de Inspecciones</h2>
           </CardHeader>
           <CardBody className="p-0">
-            <DataTable
-              data={mockChecklists}
-              columns={columns}
-              emptyMessage="No hay inspecciones registradas"
-            />
+            {isLoadingChecklists ? (
+              <div className="p-8 text-center">
+                <Loader className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                <p className="text-gray-600">Cargando inspecciones...</p>
+              </div>
+            ) : (
+              <DataTable
+                data={mappedChecklists}
+                columns={columns}
+                emptyMessage="No hay inspecciones registradas"
+              />
+            )}
           </CardBody>
         </Card>
       </div>

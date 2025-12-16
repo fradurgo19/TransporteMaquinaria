@@ -56,6 +56,17 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const AdminOrLogisticsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  
+  // Permitir admin (transporte) y admin_logistics (logística)
+  if (user?.role !== 'admin' && user?.role !== 'admin_logistics') {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const DashboardRedirect: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { isEquipmentSelected } = useEquipment();
@@ -130,9 +141,9 @@ const AppRoutes: React.FC = () => {
         path="/equipment"
         element={
           <ProtectedRoute>
-            <AdminRoute>
+            <AdminOrLogisticsRoute>
               <EquipmentPage />
-            </AdminRoute>
+            </AdminOrLogisticsRoute>
           </ProtectedRoute>
         }
       />
@@ -180,9 +191,9 @@ const AppRoutes: React.FC = () => {
         path="/machines-management"
         element={
           <ProtectedRoute>
-            <AdminRoute>
+            <AdminOrLogisticsRoute>
               <MachinesManagementPage />
-            </AdminRoute>
+            </AdminOrLogisticsRoute>
           </ProtectedRoute>
         }
       />
@@ -190,9 +201,9 @@ const AppRoutes: React.FC = () => {
         path="/manufacturer-kpg"
         element={
           <ProtectedRoute>
-            <AdminRoute>
+            <AdminOrLogisticsRoute>
               <ManufacturerKPGPage />
-            </AdminRoute>
+            </AdminOrLogisticsRoute>
           </ProtectedRoute>
         }
       />

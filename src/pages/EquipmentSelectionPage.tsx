@@ -7,6 +7,7 @@ import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
 import { useEquipment as useEquipmentHook } from '../hooks/useEquipment';
+import { useDepartment } from '../hooks/useDepartment';
 
 interface Equipment {
   id: string;
@@ -22,10 +23,12 @@ export const EquipmentSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { selectEquipment, autoSelectAssignedEquipment } = useEquipment();
+  const { department } = useDepartment();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAutoSelecting, setIsAutoSelecting] = useState(true);
 
   // Usar hook optimizado que incluye autenticación automáticamente
+  // El hook ya filtra por departamento automáticamente
   const { 
     data: equipmentData, 
     isLoading, 
@@ -40,29 +43,83 @@ export const EquipmentSelectionPage: React.FC = () => {
 
   const equipment = equipmentData?.data || [];
 
+  // Log de depuración
+  React.useEffect(() => {
+    if (user && department) {
+      console.log(`🔍 EquipmentSelectionPage - Usuario: ${user.email}, Rol: ${user.role}, Departamento: ${department}, Equipos encontrados: ${equipment.length}`);
+    }
+  }, [user, department, equipment.length]);
+
   // Auto-seleccionar vehículo asignado al usuario
   React.useEffect(() => {
     const tryAutoSelect = async () => {
       if (user?.id && isAutoSelecting) {
-        const assigned = await autoSelectAssignedEquipment(user.id);
-        if (assigned) {
-          console.log('✅ Vehículo asignado automáticamente, redirigiendo...');
-          navigate('/');
-        } else {
-          console.log('ℹ️ Usuario sin vehículo asignado, mostrando selector');
+        try {
+          // Timeout para evitar que se quede colgado
+          const timeoutPromise = new Promise<boolean>((_, reject) => 
+            setTimeout(() => reject(new Error('Auto-select timeout')), 10000)
+          );
+
+          const selectPromise = autoSelectAssignedEquipment(user.id);
+          
+          const assigned = await Promise.race([selectPromise, timeoutPromise]) as boolean;
+          
+          if (assigned) {
+            console.log('✅ Vehículo asignado automáticamente, redirigiendo...');
+            navigate('/');
+          } else {
+            console.log('ℹ️ Usuario sin vehículo asignado, mostrando selector');
+          }
+        } catch (error: any) {
+          console.warn('⚠️ Error o timeout en auto-selección:', error?.message || error);
+          // Si hay error o timeout, simplemente mostrar el selector
+          console.log('ℹ️ Mostrando selector de equipos debido a error/timeout');
+        } finally {
+          setIsAutoSelecting(false);
         }
-        setIsAutoSelecting(false);
       }
     };
 
+    // Solo intentar auto-seleccionar si:
+    // 1. No está cargando Y hay equipos disponibles, O
+    // 2. Ha pasado un tiempo razonable (5 segundos) sin cargar (para evitar quedarse colgado)
     if (!isLoading && equipment.length > 0) {
       tryAutoSelect();
+    } else if (isAutoSelecting) {
+      // Timeout de seguridad: si después de 5 segundos aún está cargando, mostrar selector
+      const timeoutId = setTimeout(() => {
+        if (isAutoSelecting) {
+          console.warn('⏱️ Timeout esperando equipos, mostrando selector...');
+          setIsAutoSelecting(false);
+        }
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [user, isLoading, equipment.length]);
+  }, [user, isLoading, equipment.length, isAutoSelecting, navigate]);
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      // Mostrar estado de carga mientras se hace logout
+      setIsAutoSelecting(true);
+      
+      // Timeout para logout (5 segundos)
+      const logoutPromise = logout();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Logout timeout')), 5000)
+      );
+
+      await Promise.race([logoutPromise, timeoutPromise]);
+      
+      // Navegar al login incluso si hay timeout (el logout ya limpió el estado)
+      navigate('/login');
+    } catch (error: any) {
+      console.error('❌ Error en logout:', error);
+      // Aún así navegar al login (el logout ya limpió el estado local)
+      navigate('/login');
+    } finally {
+      setIsAutoSelecting(false);
+    }
   };
 
   const handleSelect = (equip: Equipment) => {
@@ -185,7 +242,12 @@ export const EquipmentSelectionPage: React.FC = () => {
               No hay equipos disponibles
             </h3>
             <p className="text-gray-600 mb-4">
-              No se encontraron vehículos activos en el sistema.
+              {department === 'logistics' 
+                ? 'No se encontraron vehículos activos de logística en el sistema. Contacta al administrador para agregar vehículos de logística.'
+                : 'No se encontraron vehículos activos en el sistema.'}
+            </p>
+            <p className="text-xs text-gray-500 mb-4">
+              Departamento: <span className="font-semibold">{department === 'logistics' ? 'Logística' : 'Transporte'}</span>
             </p>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => refetch()} variant="primary">

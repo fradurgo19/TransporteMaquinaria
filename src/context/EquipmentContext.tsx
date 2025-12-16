@@ -51,19 +51,40 @@ export const EquipmentProvider: React.FC<EquipmentProviderProps> = ({ children }
   // Función para auto-seleccionar vehículo asignado
   const autoSelectAssignedEquipment = async (userId: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('equipment')
-        .select('id, license_plate, driver_name, brand, vehicle_type, serial_number')
-        .eq('assigned_driver_id', userId)
-        .eq('status', 'active')
-        .eq('department', 'transport')
-        .single();
+      // Intentar validar conexión en background (no bloqueante)
+      const { forceConnectionValidation } = await import('../services/connectionManager');
+      forceConnectionValidation().catch(() => {
+        // Ignorar errores, continuar con la query
+      });
+      
+      // Usar executeSupabaseQuery para mejor manejo de timeouts y reconexión
+      const { executeSupabaseQuery } = await import('../services/supabaseInterceptor');
+      
+      const result = await executeSupabaseQuery(
+        async () => {
+          const query = supabase
+            .from('equipment')
+            .select('id, license_plate, driver_name, brand, vehicle_type, serial_number')
+            .eq('assigned_driver_id', userId)
+            .eq('status', 'active')
+            .eq('department', 'transport')
+            .maybeSingle(); // Usar maybeSingle en lugar de single para evitar error si no hay resultado
 
-      if (error || !data) {
+          return await query;
+        },
+        {
+          timeout: 10000, // 10 segundos
+          maxRetries: 1,
+          autoRefresh: true,
+        }
+      );
+
+      if (result.error || !result.data) {
         console.log('No hay vehículo asignado para este usuario');
         return false;
       }
 
+      const data = result.data as any;
       const equipment: Equipment = {
         id: data.id,
         license_plate: data.license_plate,
@@ -77,8 +98,12 @@ export const EquipmentProvider: React.FC<EquipmentProviderProps> = ({ children }
       localStorage.setItem('selectedEquipment', JSON.stringify(equipment));
       console.log('✅ Vehículo asignado automáticamente:', data.license_plate);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error auto-seleccionando equipo:', error);
+      // Si es timeout o error de conexión, retornar false (no crítico)
+      if (error?.message?.includes('Timeout') || error?.message?.includes('sesión')) {
+        console.warn('⚠️ Timeout o error de sesión en auto-selección, continuando sin auto-selección');
+      }
       return false;
     }
   };

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { forceConnectionValidation, shouldValidateConnection } from './connectionManager';
 
 /**
  * Gestor de sesión para mantener la sesión activa y refrescar tokens proactivamente
@@ -8,8 +9,9 @@ import { supabase } from './supabase';
 let heartbeatInterval: NodeJS.Timeout | null = null;
 let lastRefreshTime = 0;
 let isRefreshing = false; // Lock para evitar múltiples refreshes simultáneos
-const REFRESH_INTERVAL = 5 * 60 * 1000; // Refrescar cada 5 minutos
-const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // Heartbeat cada 2 minutos
+const REFRESH_INTERVAL = 3 * 60 * 1000; // Refrescar cada 3 minutos (más frecuente)
+const HEARTBEAT_INTERVAL = 1 * 60 * 1000; // Heartbeat cada 1 minuto (más frecuente)
+const TOKEN_EXPIRY_THRESHOLD = 20 * 60; // Refrescar si expira en menos de 20 minutos (más proactivo)
 
 /**
  * Verificar y refrescar sesión si es necesario
@@ -41,22 +43,22 @@ export const refreshSessionIfNeeded = async (): Promise<boolean> => {
       return false;
     }
 
-    // Verificar si el token expira pronto (en menos de 15 minutos)
+    // Verificar si el token expira pronto (en menos de 20 minutos)
     const expiresAt = session.expires_at || 0;
     const now = Math.floor(Date.now() / 1000);
     const timeUntilExpiry = expiresAt - now;
 
-    // Si el token expira en menos de 15 minutos Y no se ha refrescado recientemente, refrescarlo
-    if (timeUntilExpiry < 900 && (Date.now() - lastRefreshTime) > 60000) {
+    // Si el token expira en menos de 20 minutos Y no se ha refrescado recientemente, refrescarlo
+    if (timeUntilExpiry < TOKEN_EXPIRY_THRESHOLD && (Date.now() - lastRefreshTime) > 30000) {
       // Activar lock
       isRefreshing = true;
       
       try {
         console.log('🔄 Token expira pronto, refrescando sesión...');
         
-        // Timeout más largo para refresh (15 segundos)
+        // Timeout más corto para refresh (10 segundos) para evitar bloqueos
         const refreshTimeoutPromise = new Promise<boolean>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout refrescando sesión')), 15000)
+          setTimeout(() => reject(new Error('Timeout refrescando sesión')), 10000)
         );
 
         const refreshPromise = (async () => {
@@ -124,16 +126,40 @@ export const startSessionHeartbeat = () => {
   heartbeatInterval = setInterval(async () => {
     const now = Date.now();
     
-    // Solo refrescar si han pasado al menos REFRESH_INTERVAL desde el último refresh
-    if (now - lastRefreshTime >= REFRESH_INTERVAL) {
-      await refreshSessionIfNeeded();
-    } else {
-      // Si no es tiempo de refrescar, solo verificar que la sesión esté activa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.warn('⚠️ Sesión perdida, intentando refrescar...');
+    try {
+      // Intentar validar conexión en background (no bloqueante)
+      if (shouldValidateConnection()) {
+        forceConnectionValidation().catch(() => {
+          // Ignorar errores, continuar con verificación de sesión
+        });
+      }
+      
+      // Verificar sesión primero (rápido) con timeout más largo
+      const { data: { session }, error } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<{ data: { session: any }; error: any }>((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        )
+      ]);
+
+      if (error || !session) {
+        console.warn('⚠️ Sesión perdida o error, intentando refrescar...');
+        await refreshSessionIfNeeded();
+        return;
+      }
+
+      // Solo refrescar si han pasado al menos REFRESH_INTERVAL desde el último refresh
+      if (now - lastRefreshTime >= REFRESH_INTERVAL) {
         await refreshSessionIfNeeded();
       }
+    } catch (error) {
+      // Si hay error verificando sesión, intentar refrescar (no bloquear en validación)
+      console.warn('⚠️ Error verificando sesión en heartbeat, intentando refrescar...');
+      
+      // Intentar refrescar sin bloquear en validación de conexión
+      refreshSessionIfNeeded().catch(() => {
+        // Ignorar errores, continuar en próximo ciclo
+      });
     }
   }, HEARTBEAT_INTERVAL);
 };
