@@ -55,6 +55,34 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     const MIN_HIDDEN_TIME = 30 * 1000; // Mínimo 30 segundos oculta para refrescar
     const INVALIDATION_COOLDOWN = 5 * 1000; // 5 segundos mínimo entre invalidaciones
 
+    let lastUserActivity = Date.now();
+    const INACTIVITY_THRESHOLD = 10 * 60 * 1000; // 10 minutos de inactividad
+    
+    // Listener para detectar actividad del usuario (mouse, keyboard, touch)
+    const handleUserActivity = () => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastUserActivity;
+      
+      // Si el usuario estuvo inactivo por más de 10 minutos, invalidar queries
+      if (timeSinceLastActivity > INACTIVITY_THRESHOLD && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
+        console.log(`👆 Usuario activo después de ${Math.round(timeSinceLastActivity / 1000)}s de inactividad, refrescando datos...`);
+        
+        lastInvalidationTime = now;
+        
+        // Validar conexión y refrescar sesión
+        forceConnectionValidation().catch(() => {});
+        refreshSessionIfNeeded().catch(() => {});
+        
+        // Invalidar y refrescar queries activas
+        setTimeout(() => {
+          queryClient.invalidateQueries();
+          queryClient.refetchQueries({ type: 'active' });
+        }, 500);
+      }
+      
+      lastUserActivity = now;
+    };
+    
     // Listener para detectar cuando la app vuelve a estar visible después de estar oculta
     const handleVisibilityChange = async () => {
       const now = Date.now();
@@ -138,11 +166,20 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
       }
     });
 
+    // Agregar listeners para detectar actividad del usuario
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, handleUserActivity, { passive: true });
+    });
+    
     // Solo agregar listener de visibilitychange (NO focus)
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, handleUserActivity);
+      });
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription.unsubscribe();
       stopSessionHeartbeat();

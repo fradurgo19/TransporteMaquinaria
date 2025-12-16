@@ -29,17 +29,18 @@ export const validateConnection = async (): Promise<boolean> => {
     
     try {
       // Hacer un fetch directo al endpoint de auth (más confiable)
-      // Usar OPTIONS o HEAD para minimizar carga
-      const response = await fetch(`${supabaseUrl}/auth/v1/health`, {
-        method: 'HEAD',
+      // Usar GET en lugar de HEAD porque Supabase no soporta HEAD en /auth/v1/health
+      // Usar el endpoint REST que siempre existe y soporta GET
+      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: 'GET',
         headers: {
           'apikey': supabaseAnonKey,
         },
         signal: controller.signal,
-      }).catch(() => {
-        // Si el endpoint no existe, intentar con el endpoint principal
+      }).catch((getError) => {
+        // Si el endpoint falla, intentar con el endpoint principal
         return fetch(`${supabaseUrl}/`, {
-          method: 'HEAD',
+          method: 'GET',
           signal: controller.signal,
         });
       });

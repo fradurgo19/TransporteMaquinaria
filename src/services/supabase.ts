@@ -39,10 +39,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     headers: {
       'x-client-info': 'transport-management-app',
     },
-    // Timeout para requests HTTP (15 segundos - más agresivo para evitar bloqueos)
-    // Mejorado con mejor manejo de abort y reconexión
+    // Timeout para requests HTTP (30 segundos - aumentado para manejar mejor la inactividad)
+    // Después de 10 minutos de inactividad, las queries pueden tardar más
     fetch: async (url, options = {}) => {
-      const timeoutMs = 15000;
+      const timeoutMs = 30000;
       
       // Si ya hay un signal, usarlo; si no, crear uno con timeout
       let signal = options.signal;
