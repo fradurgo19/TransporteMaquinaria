@@ -77,22 +77,30 @@ app.post('/send-transport-request-notification', async (req, res) => {
   }
 });
 
-// Cron job: Ejecutar todos los días a las 8:00 AM
-cron.schedule('0 8 * * *', () => {
-  console.log('⏰ Ejecutando envío automático de alertas...');
-  exec('node send-alerts.js', (error, stdout, stderr) => {
-    if (error) {
-      console.error('❌ Error en cron job:', error);
-      return;
-    }
-    console.log('✅ Cron job completado:', stdout);
+// Cron job: Ejecutar todos los días a las 8:00 AM (solo en producción)
+if (process.env.NODE_ENV !== 'test') {
+  cron.schedule('0 8 * * *', () => {
+    console.log('⏰ Ejecutando envío automático de alertas...');
+    exec('node send-alerts.js', (error, stdout, stderr) => {
+      if (error) {
+        console.error('❌ Error en cron job:', error);
+        return;
+      }
+      console.log('✅ Cron job completado:', stdout);
+    });
+  }, {
+    timezone: "America/Bogota"
   });
-}, {
-  timezone: "America/Bogota"
-});
+}
 
-app.listen(PORT, () => {
-  console.log(`🚀 Email service running on port ${PORT}`);
-  console.log(`⏰ Cron job configurado: Envío diario a las 8:00 AM (Bogotá)`);
-});
+// Iniciar servidor solo si no estamos en modo test
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Email service running on port ${PORT}`);
+    console.log(`⏰ Cron job configurado: Envío diario a las 8:00 AM (Bogotá)`);
+  });
+}
+
+// Exportar app para pruebas
+export default app;
 
