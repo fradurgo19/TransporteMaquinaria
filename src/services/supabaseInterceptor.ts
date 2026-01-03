@@ -108,7 +108,12 @@ const refreshSession = async (): Promise<boolean> => {
       if (error?.message?.includes('timeout')) {
         connectionRetryCount++;
         if (connectionRetryCount >= MAX_RETRY_COUNT) {
-          console.error('❌ Máximo de reintentos alcanzado, limpiando estado');
+          console.error('❌ Máximo de reintentos alcanzado, cerrando sesión para limpiar estado');
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // Ignorar error de signOut
+          }
           connectionRetryCount = 0;
         }
       }
@@ -278,6 +283,12 @@ export const executeSupabaseQuery = async <T>(
       // Si es timeout y no se pudo reconectar, lanzar error
       if (error?.message?.includes('Timeout')) {
         console.error('⏱️ Timeout en query de Supabase después de todos los reintentos');
+        // Forzar sign out para limpiar sesión atascada y permitir login limpio
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // Ignorar error de signOut
+        }
         throw error;
       }
       

@@ -4,6 +4,9 @@ import { useDepartment } from './useDepartment';
 import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 import { ensureActiveSession } from '../services/sessionManager';
 
+const DEBUG_EQUIPMENT = false;
+const debugLog = DEBUG_EQUIPMENT ? console.log : (..._args: any[]) => {};
+
 interface Equipment {
   id: string;
   driver_name: string;
@@ -45,7 +48,7 @@ export const useEquipment = (params: EquipmentQueryParams = {}) => {
         throw new Error('Departamento no disponible');
       }
 
-      console.log(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
+      debugLog(`📋 Cargando equipos - Departamento: ${department}, Página: ${page}`);
 
       // Construir query
       let query = supabase

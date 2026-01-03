@@ -4,6 +4,11 @@ import { supabase } from '../services/supabase';
 import { startSessionHeartbeat, stopSessionHeartbeat, refreshSessionIfNeeded } from '../services/sessionManager';
 import { forceConnectionValidation } from '../services/connectionManager';
 
+// Toggle de logs de depuración para QueryProvider
+const DEBUG_QUERY = false;
+const debugLog = DEBUG_QUERY ? console.log : (..._args: any[]) => {};
+const debugWarn = DEBUG_QUERY ? console.warn : (..._args: any[]) => {};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -45,6 +50,45 @@ interface QueryProviderProps {
   children: React.ReactNode;
 }
 
+/**
+ * Ejecuta una tarea con timeout y valor de respaldo en caso de error o demora.
+ */
+const runWithTimeout = async <T>(
+  task: () => Promise<T>,
+  timeoutMs: number,
+  fallback: T
+): Promise<T> => {
+  try {
+    return await Promise.race([
+      task(),
+      new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs))
+    ]);
+  } catch {
+    return fallback;
+  }
+};
+
+/**
+ * Valida conexión y refresca sesión de forma bloqueante y con timeout.
+ */
+const ensureFreshSession = async (): Promise<boolean> => {
+  // Validar conexión (máx 4s) pero no bloquear si falla
+  await runWithTimeout(() => forceConnectionValidation(), 4000, true);
+  // Refrescar/validar sesión (máx 8s)
+  const refreshed = await runWithTimeout(() => refreshSessionIfNeeded(), 8000, false);
+  if (!refreshed) {
+    // Si no se pudo refrescar, cerrar sesión para limpiar estado atascado
+    try {
+      await supabase.auth.signOut();
+      queryClient.cancelQueries();
+      queryClient.clear();
+    } catch {
+      // Ignorar
+    }
+  }
+  return refreshed;
+};
+
 export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
   useEffect(() => {
     // Iniciar heartbeat para mantener sesión activa
@@ -60,27 +104,30 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     
     // Listener para detectar actividad del usuario (mouse, keyboard, touch)
     const handleUserActivity = () => {
-      const now = Date.now();
-      const timeSinceLastActivity = now - lastUserActivity;
-      
-      // Si el usuario estuvo inactivo por más de 10 minutos, invalidar queries
-      if (timeSinceLastActivity > INACTIVITY_THRESHOLD && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-        console.log(`👆 Usuario activo después de ${Math.round(timeSinceLastActivity / 1000)}s de inactividad, refrescando datos...`);
+      void (async () => {
+        const now = Date.now();
+        const timeSinceLastActivity = now - lastUserActivity;
         
-        lastInvalidationTime = now;
+        // Si el usuario estuvo inactivo por más de 10 minutos, invalidar queries
+        if (timeSinceLastActivity > INACTIVITY_THRESHOLD && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
+          debugLog(`👆 Usuario activo después de ${Math.round(timeSinceLastActivity / 1000)}s de inactividad, refrescando datos...`);
+          
+          lastInvalidationTime = now;
+          
+          // Validar conexión y refrescar sesión (bloqueante)
+          const sessionOk = await ensureFreshSession();
+          
+          if (sessionOk) {
+            // Invalidar y refrescar queries activas
+            await queryClient.invalidateQueries();
+            await queryClient.refetchQueries({ type: 'active' });
+          } else {
+          debugWarn('⚠️ No se pudo refrescar sesión tras inactividad; se omite refetch');
+          }
+        }
         
-        // Validar conexión y refrescar sesión
-        forceConnectionValidation().catch(() => {});
-        refreshSessionIfNeeded().catch(() => {});
-        
-        // Invalidar y refrescar queries activas
-        setTimeout(() => {
-          queryClient.invalidateQueries();
-          queryClient.refetchQueries({ type: 'active' });
-        }, 500);
-      }
-      
-      lastUserActivity = now;
+        lastUserActivity = now;
+      })();
     };
     
     // Listener para detectar cuando la app vuelve a estar visible después de estar oculta
@@ -97,41 +144,29 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
           
           // Solo refrescar si estuvo oculta por más de 30 segundos Y han pasado al menos 5 segundos desde la última invalidación
           if (timeHidden > MIN_HIDDEN_TIME && (now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-            console.log(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, validando conexión y refrescando datos...`);
+            debugLog(`👁️ App visible después de ${Math.round(timeHidden / 1000)}s oculta, validando conexión y refrescando datos...`);
             
             lastInvalidationTime = now;
-            
-            // Intentar validar conexión en background (no bloqueante)
-            forceConnectionValidation().catch(() => {
-              // Ignorar errores de validación en background
-            });
-            
-            // Refrescar sesión después de validar conexión
-            refreshSessionIfNeeded().catch(() => {
-              // Ignorar errores de refresh en background
-            });
-            
-            // Refrescar queries activas después de un pequeño delay para dar tiempo al refresh de sesión
-            setTimeout(() => {
-              queryClient.refetchQueries({ 
+            const sessionOk = await ensureFreshSession();
+
+            if (sessionOk) {
+              // Refrescar queries activas si están stale
+              await queryClient.refetchQueries({ 
                 type: 'active',
                 predicate: (query) => {
                   const dataAge = Date.now() - (query.state.dataUpdatedAt || 0);
                   return dataAge > MIN_HIDDEN_TIME;
                 }
               });
-            }, 500);
+            } else {
+              debugWarn('⚠️ No se pudo refrescar sesión al volver a la app; se omite refetch');
+            }
           }
           
           hiddenTime = null;
         } else {
           // Si no estaba oculta pero la app vuelve a estar visible, validar conexión y refrescar sesión
-          forceConnectionValidation().catch(() => {
-            // Ignorar errores
-          });
-          refreshSessionIfNeeded().catch(() => {
-            // Ignorar errores
-          });
+          await ensureFreshSession();
         }
       }
     };
@@ -140,7 +175,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       // Solo loguear eventos importantes, no todos
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
-        console.log('🔐 Auth state changed:', event);
+        debugLog('🔐 Auth state changed:', event);
       }
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
@@ -148,7 +183,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
         // pero solo si han pasado al menos 5 segundos desde la última invalidación
         const now = Date.now();
         if ((now - lastInvalidationTime) > INVALIDATION_COOLDOWN) {
-          console.log('🔄 Sesión renovada, invalidando y refrescando queries...');
+          debugLog('🔄 Sesión renovada, invalidando y refrescando queries...');
           lastInvalidationTime = now;
           // Invalidar todas las queries y refrescar las activas
           queryClient.invalidateQueries();
@@ -159,7 +194,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
         }
       } else if (event === 'SIGNED_OUT') {
         // Limpiar todas las queries cuando se cierra sesión
-        console.log('🚪 Sesión cerrada, limpiando queries...');
+        debugLog('🚪 Sesión cerrada, limpiando queries...');
         queryClient.cancelQueries();
         queryClient.clear();
         stopSessionHeartbeat();

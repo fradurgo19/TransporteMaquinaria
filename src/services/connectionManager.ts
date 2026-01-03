@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
 
+// Toggle de logs de depuración para conexión
+const DEBUG_CONNECTION = false;
+const debugLog = DEBUG_CONNECTION ? console.log : (..._args: any[]) => {};
+const debugWarn = DEBUG_CONNECTION ? console.warn : (..._args: any[]) => {};
+
 /**
  * Gestor de conexión que valida y reconecta automáticamente cuando las conexiones
  * se cierran después de inactividad. Resuelve el problema de timeouts indefinidos.
@@ -57,7 +62,7 @@ export const validateConnection = async (): Promise<boolean> => {
       // Pero ser permisivo y asumir que está bien (la operación usará su propio timeout)
       if (fetchError.name === 'AbortError' || controller.signal.aborted) {
         // Ser permisivo: no bloquear, dejar que la operación use su propio timeout
-        console.warn('⚠️ Validación de conexión timeout, permitiendo operación');
+        debugWarn('⚠️ Validación de conexión timeout, permitiendo operación');
         return true; // Ser permisivo para evitar bloqueos
       }
       
@@ -68,7 +73,7 @@ export const validateConnection = async (): Promise<boolean> => {
   } catch (error) {
     // Si falla completamente, ser permisivo y asumir que está bien
     // La operación tendrá su propio timeout
-    console.warn('⚠️ Error validando conexión, permitiendo operación con timeout propio');
+    debugWarn('⚠️ Error validando conexión, permitiendo operación con timeout propio');
     return true; // Ser permisivo para evitar bloqueos
   }
 };
@@ -100,7 +105,7 @@ export const ensureConnection = async (): Promise<boolean> => {
         setTimeout(() => {
           // Si la validación tarda mucho, asumir que está bien y dejar que la operación
           // use su propio timeout (más permisivo)
-          console.warn('⚠️ Validación de conexión lenta, permitiendo operación con timeout propio');
+          debugWarn('⚠️ Validación de conexión lenta, permitiendo operación con timeout propio');
           resolve(true);
         }, 2000) // Timeout de 2 segundos para la validación misma
       )
@@ -110,7 +115,7 @@ export const ensureConnection = async (): Promise<boolean> => {
   } catch (error) {
     // Si falla la validación, ser permisivo y permitir que la operación continúe
     // La operación tendrá su propio timeout que la manejará
-    console.warn('⚠️ No se pudo validar conexión, permitiendo operación con timeout propio');
+    debugWarn('⚠️ No se pudo validar conexión, permitiendo operación con timeout propio');
     return true; // Ser permisivo para evitar bloqueos
   }
 };
@@ -138,7 +143,7 @@ export const withConnectionCheck = async <T>(
   } catch (error: any) {
     // Si es timeout, resetear validación para próxima vez
     if (error?.message?.includes('timeout') || error?.message?.includes('Timeout')) {
-      console.log(`⏱️ Timeout en ${operationName}`);
+      debugLog(`⏱️ Timeout en ${operationName}`);
       connectionValidatedAt = 0; // Resetear para forzar validación en próxima operación
     }
     

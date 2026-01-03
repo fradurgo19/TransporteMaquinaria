@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+
+const DEBUG_VEHICLE_KPG = false;
+const debugWarn = DEBUG_VEHICLE_KPG ? console.warn : (..._args: any[]) => {};
 import { executeSupabaseQuery } from '../services/supabaseInterceptor';
 
 export interface VehicleKPG {
@@ -131,9 +134,9 @@ export const useVehicleKPG = () => {
         // Si la tabla no existe (404) o hay otro error, simplemente continuar sin datos de manufacturer_kpg
         // Esto es opcional y no debe fallar toda la query
         if (error?.status === 404 || error?.code === 'PGRST116' || error?.message?.includes('404')) {
-          console.warn('⚠️ Tabla manufacturer_kpg no encontrada, continuando sin datos de KPG de fábrica');
+          debugWarn('⚠️ Tabla manufacturer_kpg no encontrada, continuando sin datos de KPG de fábrica');
         } else {
-          console.warn('⚠️ Error al obtener manufacturer_kpg:', error);
+          debugWarn('⚠️ Error al obtener manufacturer_kpg:', error);
         }
         // Continuar sin estos datos - no es crítico
       }

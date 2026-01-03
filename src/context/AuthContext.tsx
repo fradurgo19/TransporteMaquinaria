@@ -2,6 +2,11 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { AuthContextType, User, UserRole } from '../types';
 
+// Toggle de logs de depuración para auth (mantener en false en producción)
+const DEBUG_AUTH = false;
+const debugLog = DEBUG_AUTH ? console.log : (..._args: any[]) => {};
+const debugWarn = DEBUG_AUTH ? console.warn : (..._args: any[]) => {};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -32,21 +37,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Evitar múltiples llamadas simultáneas
       if (fetchingProfileRef.current && !forceRefresh) {
-        console.log('⏸️ Profile fetch already in progress, skipping...');
+        debugLog('⏸️ Profile fetch already in progress, skipping...');
         return;
       }
 
       // Cache temporal: no hacer fetch si se hizo hace menos de 5 segundos (excepto si es forzado)
       const now = Date.now();
       if (!forceRefresh && now - lastFetchTimeRef.current < 5000 && user?.id === userId) {
-        console.log('💾 Using cached user profile');
+        debugLog('💾 Using cached user profile');
         return;
       }
 
       fetchingProfileRef.current = true;
       lastFetchTimeRef.current = now;
 
-      console.log('🔍 Fetching user profile for ID:', userId);
+      debugLog('🔍 Fetching user profile for ID:', userId);
 
       // SOLUCIÓN: Usar SOLO auth.users directamente (sin tabla users que da timeout)
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
@@ -84,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data } = result;
 
       if (data && isMountedRef.current) {
-        console.log('✅ User profile fetched from auth.users');
+        debugLog('✅ User profile fetched from auth.users');
         const userData: User = {
           id: data.id,
           username: data.email?.split('@')[0] || 'user',
@@ -97,7 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(userData);
         userSetRef.current = true;
       } else {
-        console.warn('⚠️ No user data returned');
+        debugWarn('⚠️ No user data returned');
         if (!user) {
           setUser(null);
           userSetRef.current = false;
@@ -110,12 +115,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       fetchingProfileRef.current = false;
       
       if (error.message?.includes('Timeout')) {
-        console.warn('⏱️ Query timeout, usando fallback directo (mantener usuario actual)');
+        debugWarn('⏱️ Query timeout, usando fallback directo (mantener usuario actual)');
         fetchingProfileRef.current = false;
         
         // Si ya tenemos usuario en cache, mantenerlo
         if (user && user.id === userId) {
-          console.log('✅ Manteniendo usuario en cache');
+          debugLog('✅ Manteniendo usuario en cache');
           return;
         }
         
@@ -129,8 +134,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           
           if (authUser && isMountedRef.current) {
-            console.log('✅ Using auth user as fallback');
-            console.log('📋 Auth user data:', {
+            debugLog('✅ Using auth user as fallback');
+            debugLog('📋 Auth user data:', {
               id: authUser.id,
               email: authUser.email,
               metadata: authUser.user_metadata
@@ -148,15 +153,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               createdAt: authUser.created_at || new Date().toISOString(),
             };
             
-            console.log('✅ Fallback user created (from auth metadata):', fallbackUser);
-            console.log('🔄 Setting user state...');
+            debugLog('✅ Fallback user created (from auth metadata):', fallbackUser);
+            debugLog('🔄 Setting user state...');
             
             if (isMountedRef.current) {
               setUser(fallbackUser);
               userSetRef.current = true;
-              console.log('✅ User state set successfully, userSetRef:', userSetRef.current);
+              debugLog('✅ User state set successfully, userSetRef:', userSetRef.current);
             } else {
-              console.warn('⚠️ Component unmounted, cannot set user');
+              debugWarn('⚠️ Component unmounted, cannot set user');
             }
             
             // Intentar actualizar el perfil en background (sin bloquear)
@@ -170,7 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   .maybeSingle();
                 
                 if (userData && isMountedRef.current) {
-                  console.log('✅ Background profile update successful');
+                  debugLog('✅ Background profile update successful');
                   setUser({
                     ...fallbackUser,
                     username: userData.username || fallbackUser.username,
@@ -180,25 +185,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   });
                 }
               } catch (bgError) {
-                console.warn('⚠️ Background profile update failed (non-critical):', bgError);
+                debugWarn('⚠️ Background profile update failed (non-critical):', bgError);
               }
             }, 1000);
           } else if (!user && isMountedRef.current) {
-            console.warn('⚠️ No auth user available, clearing session');
+            debugWarn('⚠️ No auth user available, clearing session');
             setUser(null);
           }
         } catch (fallbackError) {
           console.error('❌ Fallback also failed:', fallbackError);
           // Si no hay usuario en cache y fallback falla, cerrar sesión
           if (!user && isMountedRef.current) {
-            console.warn('⚠️ All fallbacks failed, clearing session');
+            debugWarn('⚠️ All fallbacks failed, clearing session');
             setUser(null);
           }
         }
       } else {
         // Para otros errores, mantener usuario si existe
         if (!user && isMountedRef.current) {
-          console.warn('⚠️ Error and no cached user, clearing session');
+          debugWarn('⚠️ Error and no cached user, clearing session');
           setUser(null);
         }
       }
@@ -211,11 +216,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const initAuth = async () => {
       try {
-        console.log('🔄 Initializing auth...');
+        debugLog('🔄 Initializing auth...');
         
         // Verificar localStorage para debugging
         const storedSession = localStorage.getItem('sb-auth-token');
-        console.log('💾 Stored session in localStorage:', storedSession ? 'exists' : 'not found');
+        debugLog('💾 Stored session in localStorage:', storedSession ? 'exists' : 'not found');
         
         // Obtener sesión persistida
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -233,9 +238,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!isMountedRef.current) return;
         
         if (session?.user) {
-          console.log('✅ Session found, user:', session.user.email);
-          console.log('🔑 Session expires at:', new Date(session.expires_at! * 1000).toISOString());
-          console.log('🔄 Restoring user profile...');
+          debugLog('✅ Session found, user:', session.user.email);
+          debugLog('🔑 Session expires at:', new Date(session.expires_at! * 1000).toISOString());
+          debugLog('🔄 Restoring user profile...');
           
           // Marcar que hay una sesión activa
           if (isMountedRef.current) {
@@ -262,7 +267,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setTimeout(() => {
               if (!userSetRef.current) {
                 timeoutReached = true;
-                console.warn('⏱️ Profile fetch timeout in init (3s), using immediate fallback');
+                debugWarn('⏱️ Profile fetch timeout in init (3s), using immediate fallback');
                 resolve('timeout');
               }
             }, 3000); // 3 segundos máximo
@@ -271,17 +276,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             await Promise.race([profilePromise, timeoutPromise]);
           } catch (error) {
-            console.warn('⚠️ Error fetching profile in init:', error);
+            debugWarn('⚠️ Error fetching profile in init:', error);
           }
           
           // Si el timeout se alcanzó, forzar el fallback
           if (timeoutReached && !userSetRef.current) {
-            console.log('⏱️ Timeout reached, forcing fallback...');
+            debugLog('⏱️ Timeout reached, forcing fallback...');
           }
           
           // Si después del fetch no se estableció el usuario, usar fallback inmediato
           if (!userSetRef.current && isMountedRef.current) {
-            console.log('🔄 No user set after fetch, using immediate auth fallback...');
+            debugLog('🔄 No user set after fetch, using immediate auth fallback...');
             try {
               const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
               if (authUser && !authError && isMountedRef.current) {
@@ -294,11 +299,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   phone: authUser.user_metadata?.phone || '',
                   createdAt: authUser.created_at || new Date().toISOString(),
                 };
-                console.log('✅ Fallback user set from auth in init:', fallbackUser);
+                debugLog('✅ Fallback user set from auth in init:', fallbackUser);
                 setUser(fallbackUser);
                 userSetRef.current = true;
               } else if (isMountedRef.current) {
-                console.warn('⚠️ Could not get auth user for fallback');
+                debugWarn('⚠️ Could not get auth user for fallback');
                 setUser(null);
                 userSetRef.current = false;
               }
@@ -314,21 +319,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Marcar inicialización como completa
           if (isMountedRef.current) {
-            console.log('✅ Auth initialization complete, user set:', userSetRef.current);
+            debugLog('✅ Auth initialization complete, user set:', userSetRef.current);
             initInProgressRef.current = false;
             // Esperar un tick para que React procese setUser antes de establecer isLoading
             // Esto asegura que el estado esté sincronizado
             await new Promise(resolve => setTimeout(resolve, 50));
             if (isMountedRef.current && userSetRef.current) {
-              console.log('✅ Setting isLoading to false after user is set');
+              debugLog('✅ Setting isLoading to false after user is set');
               setIsLoading(false);
             } else if (isMountedRef.current) {
-              console.warn('⚠️ User not set after timeout, but session exists. Setting isLoading to false anyway.');
+              debugWarn('⚠️ User not set after timeout, but session exists. Setting isLoading to false anyway.');
               setIsLoading(false);
             }
           }
         } else {
-          console.log('ℹ️ No active session found');
+          debugLog('ℹ️ No active session found');
           setUser(null);
           setHasActiveSession(false);
           userSetRef.current = false;
@@ -353,26 +358,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Escuchar cambios en el estado de autenticación
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 Auth state changed:', event, session?.user?.email);
+        debugLog('🔄 Auth state changed:', event, session?.user?.email);
         
         if (!isMountedRef.current) return;
         
-        // Ignorar eventos durante la inicialización (excepto SIGNED_OUT)
-        if (initInProgressRef.current && event !== 'SIGNED_OUT') {
-          console.log('⏸️ Initialization in progress, skipping', event, 'event');
+        // Ignorar eventos durante la inicialización excepto SIGNED_IN y SIGNED_OUT
+        // Permitimos SIGNED_IN para que el login no quede bloqueado si init sigue corriendo
+        if (initInProgressRef.current && event !== 'SIGNED_OUT' && event !== 'SIGNED_IN') {
+          debugLog('⏸️ Initialization in progress, skipping', event, 'event');
           return;
         }
         
         // Manejar diferentes eventos
         if (event === 'SIGNED_IN') {
           if (session?.user) {
-            // Solo hacer fetch si no tenemos usuario o si es diferente
-            // También verificar que no estemos ya cargando
-            if ((!user || user.id !== session.user.id) && !fetchingProfileRef.current) {
-              console.log('👤 User signed in, fetching profile...');
-              await fetchUserProfile(session.user.id, true); // Forzar refresh en login
+            // Establecer usuario inmediato desde auth para no bloquear la UI
+            const immediateUser: User = {
+              id: session.user.id,
+              username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user',
+              email: session.user.email || '',
+              role: (session.user.user_metadata?.role as UserRole) || 'user',
+              full_name: session.user.user_metadata?.full_name || '',
+              phone: session.user.user_metadata?.phone || '',
+              createdAt: session.user.created_at || new Date().toISOString(),
+            };
+            setUser(immediateUser);
+            userSetRef.current = true;
+            setHasActiveSession(true);
+            initInProgressRef.current = false;
+            setIsLoading(false);
+
+            // Fetch de perfil en background para refinar role si la tabla users responde
+            if (!fetchingProfileRef.current) {
+              console.log('👤 User signed in, fetching profile (background)...');
+              fetchUserProfile(session.user.id, true).catch((err) => {
+                console.warn('⚠️ Background profile fetch failed:', err?.message || err);
+              });
             } else {
-              console.log('👤 User already loaded or fetch in progress - skipping');
+              console.log('👤 User already loading profile - skipping duplicate fetch');
             }
           }
         } else if (event === 'INITIAL_SESSION') {
@@ -442,6 +465,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       console.log('🔐 Attempting login for:', email);
+      // Limpiar cualquier sesión atascada antes de intentar login
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Ignorar error de signOut
+      }
+      userSetRef.current = false;
+      fetchingProfileRef.current = false;
+      initInProgressRef.current = false;
+      if (isMountedRef.current) {
+        setIsLoading(true);
+        setUser(null);
+        setHasActiveSession(false);
+      }
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -460,6 +497,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Marcar que hay una sesión activa
         if (isMountedRef.current) {
           setHasActiveSession(true);
+          // Asegurar que no bloqueemos eventos SIGNED_IN posteriores
+          initInProgressRef.current = false;
         }
         
         // El onAuthStateChange manejará el fetch del perfil
