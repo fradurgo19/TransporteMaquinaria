@@ -53,7 +53,7 @@ interface QueryProviderProps {
 /**
  * Ejecuta una tarea con timeout y valor de respaldo en caso de error o demora.
  */
-const runWithTimeout = async <T>(
+const runWithTimeout = async <T,>(
   task: () => Promise<T>,
   timeoutMs: number,
   fallback: T
