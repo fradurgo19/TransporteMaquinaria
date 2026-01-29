@@ -20,6 +20,7 @@ interface OperationHour {
 
 interface OperationHoursQueryParams {
   vehiclePlate?: string;
+  driverName?: string;
   page?: number;
   limit?: number;
   status?: string;
@@ -29,10 +30,10 @@ interface OperationHoursQueryParams {
  * Hook optimizado para obtener horas de operación
  */
 export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
-  const { vehiclePlate, page = 1, limit = QUERY_LIMITS.OPERATION_HOURS, status } = params;
+  const { vehiclePlate, driverName, page = 1, limit = QUERY_LIMITS.OPERATION_HOURS, status } = params;
 
   return useQuery({
-    queryKey: ['operation_hours', vehiclePlate, page, limit, status],
+    queryKey: ['operation_hours', vehiclePlate, driverName, page, limit, status],
     queryFn: async () => {
       // Timeout para evitar que la query se quede colgada
       const timeoutPromise = new Promise((_, reject) => 
@@ -58,6 +59,11 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
       // Filtrar por placa si se proporciona
       if (vehiclePlate) {
         query = query.eq('vehicle_plate', vehiclePlate);
+      }
+
+      // Filtrar por conductor si se proporciona
+      if (driverName) {
+        query = query.eq('driver_name', driverName);
       }
 
       // Filtrar por estado si se proporciona

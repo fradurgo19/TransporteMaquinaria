@@ -208,31 +208,26 @@ export const FuelPage: React.FC = () => {
         }
       }
 
-      // Calcular valores
       const gallons = parseFloat(formData.gallons);
       const cost = parseFloat(formData.cost);
-      const startingKm = parseInt(formData.startingOdometer);
-      const endingKm = parseInt(formData.endingOdometer);
-      const kmsRecorridos = endingKm > startingKm ? endingKm - startingKm : 0;
-      const kmPerGallon = gallons > 0 ? kmsRecorridos / gallons : 0;
+      const startingKm = parseInt(formData.startingOdometer) || 0;
+      const endingKm = parseInt(formData.endingOdometer) || 0;
 
-      // Guardar en Supabase
+      // No insertar distance_traveled ni fuel_efficiency (GENERATED en BD)
       const { data, error } = await supabase
         .from('fuel_logs')
         .insert([{
           vehicle_plate: selectedEquipment.license_plate,
           fuel_date: formData.fuelDate,
-          gallons: gallons,
-          cost: cost,
+          gallons,
+          cost,
           starting_odometer: startingKm,
           ending_odometer: endingKm,
-          distance_traveled: kmsRecorridos,
-          fuel_efficiency: kmPerGallon,
-          gas_station_name: formData.gasStationName,
+          gas_station_name: formData.gasStationName || null,
           receipt_photo_path: photoUrl || null,
           receipt_photo_url: photoUrl || null,
-          gps_latitude: latitude || 4.6097,
-          gps_longitude: longitude || -74.0817,
+          gps_latitude: latitude ?? 4.6097,
+          gps_longitude: longitude ?? -74.0817,
           created_by: user.id,
           department: 'transport',
         }])

@@ -6,13 +6,14 @@ import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
 import { Badge } from '../atoms/Badge';
-import { Plus, Upload, Download, Eye, X, AlertCircle, Edit, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Upload, Download, Eye, X, AlertCircle, Edit, Save, ChevronLeft, ChevronRight, Mail, Trash2 } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { supabase } from '../services/supabase';
 import { useEquipment, useEquipmentMutation } from '../hooks/useEquipment';
 import { uploadFile, compressImage } from '../services/uploadService';
 import { useDepartment } from '../hooks/useDepartment';
+import { useAlertRecipients } from '../hooks/useAlertRecipients';
 
 interface Equipment {
   id: string;
@@ -89,6 +90,10 @@ export const EquipmentPage: React.FC = () => {
     notes: '',
   });
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewEquipmentForm, string>>>({});
+  const [showAlertPopover, setShowAlertPopover] = useState(false);
+  const [newRecipientEmail, setNewRecipientEmail] = useState('');
+  const [newRecipientDept, setNewRecipientDept] = useState<'transport' | 'logistics'>('transport');
+  const alertPopoverRef = React.useRef<HTMLDivElement>(null);
 
   // Usar hook optimizado con paginación y filtros
   const { 
@@ -104,6 +109,17 @@ export const EquipmentPage: React.FC = () => {
 
   const { createEquipment, updateEquipment } = useEquipmentMutation();
   const { department } = useDepartment();
+  const { data: alertRecipients, add: addRecipient, remove: removeRecipient, isAdding } = useAlertRecipients();
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showAlertPopover && alertPopoverRef.current && !alertPopoverRef.current.contains(e.target as Node)) {
+        setShowAlertPopover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAlertPopover]);
 
   const equipment = equipmentData?.data || [];
   const totalPages = equipmentData?.totalPages || 1;
@@ -604,8 +620,8 @@ export const EquipmentPage: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h2 className="text-xl font-semibold text-gray-900">Lista de Equipos</h2>
               
-              {/* Búsqueda y Filtros */}
-              <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              {/* Búsqueda, Filtros y Popover Correos Alertas */}
+              <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
                 <Input
                   placeholder="Buscar por placa, conductor, marca..."
                   value={searchTerm}
@@ -630,10 +646,102 @@ export const EquipmentPage: React.FC = () => {
                   ]}
                   className="w-full md:w-auto"
                 />
+                <div className="relative" ref={alertPopoverRef}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowAlertPopover(!showAlertPopover)}
+                    className="flex items-center gap-2"
+                    title="Administrar correos de alertas de vencimiento"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Correos de alertas
+                  </Button>
+                  {showAlertPopover && (
+                    <div className="absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      <div className="p-3 border-b border-gray-200 bg-gray-50">
+                        <h3 className="font-semibold text-gray-900">Destinatarios de alertas</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Vencimiento de documentos (10 y 5 días)</p>
+                      </div>
+                      <div className="p-3 max-h-64 overflow-y-auto space-y-3">
+                        {['transport', 'logistics'].map((dept) => {
+                          const list = alertRecipients.filter((r) => r.department === dept);
+                          return (
+                            <div key={dept}>
+                              <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+                                {dept === 'transport' ? 'Transporte' : 'Logística'}
+                              </p>
+                              <ul className="space-y-1">
+                                {list.map((r) => (
+                                  <li
+                                    key={r.id}
+                                    className="flex items-center justify-between gap-2 text-sm py-1 px-2 rounded bg-gray-50"
+                                  >
+                                    <span className="truncate">{r.email}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeRecipient(r.id)}
+                                      className="text-red-600 hover:text-red-700 p-1"
+                                      title="Quitar"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </li>
+                                ))}
+                                {list.length === 0 && (
+                                  <li className="text-xs text-gray-400 py-1">Sin destinatarios</li>
+                                )}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-2">
+                        <div className="flex gap-2">
+                          <Select
+                            value={newRecipientDept}
+                            onChange={(e) => setNewRecipientDept(e.target.value as 'transport' | 'logistics')}
+                            options={[
+                              { value: 'transport', label: 'Transporte' },
+                              { value: 'logistics', label: 'Logística' },
+                            ]}
+                            className="flex-1 min-w-0"
+                          />
+                          <Input
+                            type="email"
+                            placeholder="email@ejemplo.com"
+                            value={newRecipientEmail}
+                            onChange={(e) => setNewRecipientEmail(e.target.value)}
+                            className="flex-1 min-w-0"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          disabled={!newRecipientEmail.trim() || isAdding}
+                          onClick={async () => {
+                            const email = newRecipientEmail.trim();
+                            if (!email) return;
+                            try {
+                              await addRecipient({ department: newRecipientDept, email });
+                              setNewRecipientEmail('');
+                            } catch (err: any) {
+                              alert(err?.message || 'Error al agregar');
+                            }
+                          }}
+                        >
+                          {isAdding ? 'Agregando…' : 'Agregar destinatario'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
-          <CardBody className="overflow-x-auto">
+          <CardBody className="p-0">
+            <div className="overflow-x-auto overflow-y-visible">
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
@@ -666,7 +774,7 @@ export const EquipmentPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Conductor</th>
@@ -932,6 +1040,7 @@ export const EquipmentPage: React.FC = () => {
                 </tbody>
               </table>
             )}
+            </div>
             
             {/* Controles de Paginación */}
             {equipmentData && totalPages > 1 && (

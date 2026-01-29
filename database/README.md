@@ -408,6 +408,16 @@ Comercial:  comercial@partequipos.com / Password123!
 
 ## 🔄 Migraciones
 
+### Migraciones requeridas para módulos estándar
+
+Para que Dashboard, Equipos, Horas de Operación, Combustible, Operaciones y Checklist funcionen correctamente en producción, ejecuta en Supabase (SQL Editor):
+
+1. **`fix_checklists_department.sql`**  
+   Añade la columna `department` a `pre_operational_checklists` y políticas RLS. Si no se ejecuta, el checklist intentará funcionar sin `department` (modo fallback).
+
+2. **`alert_email_recipients_setup.sql`**  
+   Crea la tabla `alert_email_recipients` para administrar los correos que reciben las alertas de vencimiento de documentos (Equipos). La app usa esta tabla desde el popover "Correos de alertas" en la página de Equipos; si no existe, se usan los destinatarios por defecto en la Edge Function.
+
 ### Crear nueva migración
 
 ```bash

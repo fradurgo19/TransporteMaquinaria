@@ -35,32 +35,32 @@ export const DashboardPage: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 hidden sm:block">
-            Overview of your transport operations
+            Resumen de las operaciones de transporte
           </p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           <MetricCard
-            title="Total Kilometers"
+            title="Kilómetros totales"
             value={metricsLoading ? '...' : dashboardMetrics.totalKilometers.toLocaleString()}
             icon={Truck}
             iconColor="text-blue-600"
             trend={!metricsLoading ? { value: 12, isPositive: true } : undefined}
           />
           <MetricCard
-            title="Fuel Consumption (L)"
+            title="Consumo combustible (L)"
             value={metricsLoading ? '...' : dashboardMetrics.fuelConsumption.toLocaleString()}
             icon={Fuel}
             iconColor="text-orange-600"
           />
           <MetricCard
-            title="Active Vehicles"
+            title="Vehículos activos"
             value={metricsLoading ? '...' : dashboardMetrics.activeVehicles.toString()}
             icon={Clock}
             iconColor="text-green-600"
           />
           <MetricCard
-            title="Expiring Documents"
+            title="Documentos por vencer"
             value={metricsLoading ? '...' : dashboardMetrics.expiringDocuments.toString()}
             icon={AlertCircle}
             iconColor="text-red-600"
@@ -94,7 +94,7 @@ export const DashboardPage: React.FC = () => {
           <Card>
             <CardHeader>
               <h2 className="text-xl font-semibold text-gray-900">
-                Recent Alerts
+                Alertas recientes
               </h2>
             </CardHeader>
             <CardBody>
@@ -150,7 +150,7 @@ export const DashboardPage: React.FC = () => {
           <Card>
             <CardHeader>
               <h2 className="text-xl font-semibold text-gray-900">
-                Vehicle Status
+                Estado de vehículos
               </h2>
             </CardHeader>
             <CardBody>

@@ -17,8 +17,8 @@ const SMTP_CONFIG = {
   fromName: 'Partequipos - Sistema de Transporte',
 };
 
-// Destinatarios por departamento (igual que backend)
-const EMAIL_RECIPIENTS = {
+// Destinatarios por defecto (si no hay alert_email_recipients en BD)
+const DEFAULT_EMAIL_RECIPIENTS: Record<string, string[]> = {
   transport: [
     'auxiliar.logisticamq@partequipos.com',
     'logisticamq@partequipos.com',
@@ -177,7 +177,29 @@ serve(async (req) => {
       );
     }
 
-    // 2. Preparar y enviar emails (igual que backend: un email por documento)
+    // 2. Obtener destinatarios desde alert_email_recipients (o usar defaults)
+    let recipientsByDept: Record<string, string[]> = { ...DEFAULT_EMAIL_RECIPIENTS };
+    try {
+      const { data: recipients } = await supabaseClient
+        .from('alert_email_recipients')
+        .select('department, email');
+      if (recipients && recipients.length > 0) {
+        recipientsByDept = { transport: [], logistics: [] };
+        for (const r of recipients) {
+          const dept = (r as { department: string; email: string }).department;
+          const email = (r as { department: string; email: string }).email;
+          if (dept === 'transport' || dept === 'logistics') {
+            recipientsByDept[dept].push(email);
+          }
+        }
+        if (recipientsByDept.transport.length === 0) recipientsByDept.transport = DEFAULT_EMAIL_RECIPIENTS.transport;
+        if (recipientsByDept.logistics.length === 0) recipientsByDept.logistics = DEFAULT_EMAIL_RECIPIENTS.logistics;
+      }
+    } catch (_) {
+      // usar defaults si la tabla no existe o falla
+    }
+
+    // 3. Preparar y enviar emails (igual que backend: un email por documento)
     const sentNotifications = [];
     const failedNotifications = [];
 
@@ -286,11 +308,10 @@ serve(async (req) => {
       `.trim();
     };
 
-    // Enviar un email por cada documento (igual que backend)
     for (const doc of pendingNotifications) {
       const recipients = doc.department === 'transport' 
-        ? EMAIL_RECIPIENTS.transport 
-        : EMAIL_RECIPIENTS.logistics;
+        ? recipientsByDept.transport 
+        : recipientsByDept.logistics;
       
       const recipientList = recipients.join(', ');
 

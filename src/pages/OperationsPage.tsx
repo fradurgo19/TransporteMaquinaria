@@ -80,19 +80,23 @@ export const OperationsPage: React.FC = () => {
   // Efecto para llenar automáticamente el origen cuando hay GPS (solo en paso loading)
   useEffect(() => {
     const fillOriginFromGPS = async () => {
-      if (currentStep === 'loading' && latitude && longitude && !loadingData.origin && !isGeocoding) {
-        setIsGeocoding(true);
-        try {
-          const result = await reverseGeocode(latitude, longitude);
-          if (result.address && !result.error) {
-            setLoadingData(prev => ({ ...prev, origin: result.address }));
-            console.log('✅ Origen llenado automáticamente desde GPS:', result.address);
-          }
-        } catch (error) {
-          console.warn('⚠️ Error obteniendo dirección desde GPS:', error);
-        } finally {
-          setIsGeocoding(false);
+      if (currentStep !== 'loading' || isGeocoding) return;
+      if (!latitude || !longitude) return;
+      if (loadingData.origin) return; // ya lleno
+      setIsGeocoding(true);
+      try {
+        const result = await reverseGeocode(latitude, longitude);
+        if (result.address && !result.error) {
+          setLoadingData(prev => ({ ...prev, origin: result.address }));
+          console.log('✅ Origen llenado automáticamente desde GPS:', result.address);
+        } else {
+          setLoadingData(prev => ({ ...prev, origin: `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}` }));
         }
+      } catch (error) {
+        console.warn('⚠️ Error obteniendo dirección desde GPS:', error);
+        setLoadingData(prev => ({ ...prev, origin: `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}` }));
+      } finally {
+        setIsGeocoding(false);
       }
     };
 
@@ -254,9 +258,12 @@ export const OperationsPage: React.FC = () => {
         if (upload) photoUrl = upload.url;
       }
 
+      const driverName = selectedEquipment?.driver_name || user?.full_name || user?.username || 'Sin asignar';
+
       // Guardar operación
       const operationData: any = {
         vehicle_plate: vehiclePlate,
+        driver_name: driverName,
         operation_type: step,
         gps_latitude: latitude || 4.6097,
         gps_longitude: longitude || -74.0817,
@@ -265,7 +272,7 @@ export const OperationsPage: React.FC = () => {
 
       if (step === 'loading') {
         operationData.equipment_serial = loadingData.equipmentSerial;
-        operationData.origin = loadingData.origin;
+        operationData.origin = loadingData.origin || (latitude && longitude ? `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}` : null);
         operationData.destination = null;
         operationData.notes = loadingData.notes || null;
       } else if (step === 'route_start') {

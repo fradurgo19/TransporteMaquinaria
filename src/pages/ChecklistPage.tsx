@@ -46,22 +46,37 @@ export const ChecklistPage: React.FC = () => {
   const [checklists, setChecklists] = React.useState<any[]>([]);
   const [isLoadingChecklists, setIsLoadingChecklists] = React.useState(true);
 
+  const [departmentColumnExists, setDepartmentColumnExists] = React.useState<boolean | null>(null);
+
   React.useEffect(() => {
     const loadChecklists = async () => {
-      if (!department) return;
-      
       setIsLoadingChecklists(true);
       try {
-        const { data, error } = await supabase
+        let q = supabase
           .from('pre_operational_checklists')
           .select('*')
-          .eq('department', department)
           .order('check_date', { ascending: false })
           .limit(100);
+        if (department && departmentColumnExists !== false) {
+          q = q.eq('department', department);
+        }
+        const { data, error } = await q;
 
         if (error) {
-          console.error('Error cargando checklists:', error);
+          const isDeptError = /department|'department'/i.test(error.message || '');
+          if (isDeptError) {
+            setDepartmentColumnExists(false);
+            const { data: data2, error: err2 } = await supabase
+              .from('pre_operational_checklists')
+              .select('*')
+              .order('check_date', { ascending: false })
+              .limit(100);
+            if (!err2) setChecklists(data2 || []);
+          } else {
+            console.error('Error cargando checklists:', error);
+          }
         } else {
+          setDepartmentColumnExists(true);
           setChecklists(data || []);
         }
       } catch (error) {
@@ -175,50 +190,91 @@ export const ChecklistPage: React.FC = () => {
                     }
                   }
 
-                  // Guardar checklist en Supabase
+                  const assessment = (formData.vehicleConditionAssessment || '').trim() || 'Sin observaciones';
+                  const payload: Record<string, unknown> = {
+                    vehicle_plate: selectedEquipment.license_plate,
+                    driver_name: user.full_name || user.username || '',
+                    check_date: formData.checkDate,
+                    tire_condition: formData.tireCondition,
+                    brake_condition: formData.brakeCondition,
+                    lights_condition: formData.lightsCondition,
+                    fluid_levels: formData.fluidLevels,
+                    engine_condition: formData.engineCondition,
+                    vehicle_condition_assessment: assessment,
+                    passed: formData.passed,
+                    photo_url: photoUrl || null,
+                    location_latitude: latitude ?? 4.6097,
+                    location_longitude: longitude ?? -74.0817,
+                    created_by: user.id,
+                  };
+                  if (departmentColumnExists !== false && department) {
+                    payload.department = department;
+                  }
+
                   const { data, error } = await supabase
                     .from('pre_operational_checklists')
-                    .insert([{
-                      vehicle_plate: selectedEquipment.license_plate,
-                      driver_name: user.full_name || user.username || '',
-                      check_date: formData.checkDate,
-                      tire_condition: formData.tireCondition,
-                      brake_condition: formData.brakeCondition,
-                      lights_condition: formData.lightsCondition,
-                      fluid_levels: formData.fluidLevels,
-                      engine_condition: formData.engineCondition,
-                      vehicle_condition_assessment: formData.vehicleConditionAssessment,
-                      passed: formData.passed,
-                      photo_url: photoUrl,
-                      location_latitude: latitude || 4.6097,
-                      location_longitude: longitude || -74.0817,
-                      created_by: user.id,
-                      department: department, // Usar el departamento del usuario actual
-                    }])
+                    .insert([payload])
                     .select();
 
                   if (error) {
-                    console.error('Error guardando:', error);
-                    alert(`Error: ${error.message}`);
-                    return;
-                  }
-
+                    const isDeptError = /department|'department'/i.test(error.message || '');
+                    if (isDeptError && departmentColumnExists !== false) {
+                      setDepartmentColumnExists(false);
+                      const retry = { ...payload };
+                      delete retry.department;
+                      const { error: err2 } = await supabase
+                        .from('pre_operational_checklists')
+                        .insert([retry])
+                        .select();
+                      if (err2) {
+                        console.error('Error guardando:', err2);
+                        alert(`Error: ${err2.message}. Ejecute database/fix_checklists_department.sql en Supabase.`);
+                        return;
+                      }
+                      const { data: updatedChecklists, error: reloadError } = await supabase
+                        .from('pre_operational_checklists')
+                        .select('*')
+                        .order('check_date', { ascending: false })
+                        .limit(100);
+                      if (!reloadError && updatedChecklists) setChecklists(updatedChecklists);
+                      alert('✅ Checklist registrado exitosamente');
+                      setFormData({
+                        vehiclePlate: selectedEquipment.license_plate,
+                        driverName: user.full_name || user.username || '',
+                        checkDate: format(new Date(), 'yyyy-MM-dd'),
+                        tireCondition: 'good',
+                        brakeCondition: 'good',
+                        lightsCondition: 'good',
+                        fluidLevels: 'good',
+                        engineCondition: 'good',
+                        vehicleConditionAssessment: '',
+                        passed: true,
+                      });
+                      setPhoto(null);
+                      setPhotoPreview('');
+                      setShowForm(false);
+                    } else {
+                      console.error('Error guardando:', error);
+                      alert(`Error: ${error.message}`);
+                      return;
+                    }
+                  } else {
                   console.log('✅ Checklist guardado:', data);
                   alert('✅ Checklist registrado exitosamente');
                   
-                  // Recargar lista de checklists
-                  const { data: updatedChecklists, error: reloadError } = await supabase
+                  let reloadQ = supabase
                     .from('pre_operational_checklists')
                     .select('*')
-                    .eq('department', department)
                     .order('check_date', { ascending: false })
                     .limit(100);
-                  
+                  if (department && departmentColumnExists !== false) {
+                    reloadQ = reloadQ.eq('department', department);
+                  }
+                  const { data: updatedChecklists, error: reloadError } = await reloadQ;
                   if (!reloadError && updatedChecklists) {
                     setChecklists(updatedChecklists);
                   }
                   
-                  // Limpiar
                   setFormData({
                     vehiclePlate: selectedEquipment.license_plate,
                     driverName: user.full_name || user.username || '',
@@ -234,6 +290,7 @@ export const ChecklistPage: React.FC = () => {
                   setPhoto(null);
                   setPhotoPreview('');
                   setShowForm(false);
+                  }
                 } catch (error: any) {
                   console.error('Error:', error);
                   alert(`Error: ${error.message}`);

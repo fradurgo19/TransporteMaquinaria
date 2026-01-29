@@ -11,7 +11,7 @@ import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, setHours, setMinutes, setSeconds } from 'date-fns';
 import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
 import { supabase } from '../services/supabase';
 import { useEquipment as useEquipmentHook } from '../hooks/useEquipment';
@@ -48,6 +48,7 @@ export const OperationHoursPage: React.FC = () => {
     is_compensatory: false,
     notes: '',
   });
+  const [driverFilter, setDriverFilter] = useState('');
 
   // Admins ven todos los registros, usuarios solo los de su vehículo
   const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
@@ -61,6 +62,7 @@ export const OperationHoursPage: React.FC = () => {
     refetch: refetchOperationHours
   } = useOperationHours({
     vehiclePlate: isAdmin ? undefined : selectedEquipment?.license_plate,
+    driverName: driverFilter || undefined,
   });
 
   const { data: activeRecord } = useActiveOperationHour(selectedEquipment?.license_plate);
@@ -79,6 +81,41 @@ export const OperationHoursPage: React.FC = () => {
   
   const vehiclesList = equipmentListData?.data || [];
   const uniqueDrivers = [...new Set(vehiclesList.map(v => v.driver_name))].filter(Boolean);
+
+  // Cierre automático de jornadas olvidadas a las 6:00 PM
+  React.useEffect(() => {
+    const closeOverdueShifts = async () => {
+      const now = new Date();
+      if (now.getHours() < 18) return;
+
+      const todayLocal = format(now, 'yyyy-MM-dd');
+      const closeAtLocal = setSeconds(setMinutes(setHours(startOfDay(now), 18), 0), 0);
+      const closeAtISO = closeAtLocal.toISOString();
+
+      const result = await executeSupabaseQuery(async () =>
+        await supabase
+          .from('operation_hours')
+          .select('id, check_in_time')
+          .eq('status', 'in_progress')
+      );
+      if (result.error || !result.data) return;
+
+      const list = (Array.isArray(result.data) ? result.data : []) as { id: string; check_in_time: string }[];
+      for (const row of list) {
+        const checkIn = new Date(row.check_in_time);
+        const checkInDate = format(checkIn, 'yyyy-MM-dd');
+        if (checkInDate !== todayLocal) continue;
+        try {
+          await supabase
+            .from('operation_hours')
+            .update({ check_out_time: closeAtISO, status: 'completed' })
+            .eq('id', row.id);
+          queryClient.invalidateQueries({ queryKey: ['operation_hours'] });
+        } catch (_) {}
+      }
+    };
+    closeOverdueShifts();
+  }, [queryClient]);
 
   const handleStartWork = async () => {
     if (!selectedEquipment?.license_plate || !user) {
@@ -510,14 +547,27 @@ export const OperationHoursPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h2 className="text-xl font-semibold text-gray-900">Registro de Horas</h2>
-              {isLoading && <span className="text-sm text-gray-500">Cargando...</span>}
-              {isError && (
-                <span className="text-sm text-red-500">
-                  Error al cargar datos
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {isAdmin && (
+                  <Select
+                    value={driverFilter}
+                    onChange={(e) => setDriverFilter(e.target.value)}
+                    options={[
+                      { value: '', label: 'Todos los conductores' },
+                      ...uniqueDrivers.map((d) => ({ value: d, label: d })),
+                    ]}
+                    className="w-full sm:w-48"
+                  />
+                )}
+                {isLoading && <span className="text-sm text-gray-500">Cargando...</span>}
+                {isError && (
+                  <span className="text-sm text-red-500">
+                    Error al cargar datos
+                  </span>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardBody className="p-0">
