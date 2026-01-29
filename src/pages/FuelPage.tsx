@@ -115,10 +115,11 @@ export const FuelPage: React.FC = () => {
         return {
           ...prev,
           vehiclePlate: result.vehiclePlate || prev.vehiclePlate,
-          gallons: gallons,
-          cost: cost,
-          pricePerGallon: pricePerGallon,
+          gallons,
+          cost,
+          pricePerGallon,
           fuelDate: result.date ? formatDateFromOCR(result.date) : prev.fuelDate,
+          gasStationName: result.gasStationName ?? prev.gasStationName,
         };
       });
 
@@ -131,8 +132,9 @@ export const FuelPage: React.FC = () => {
 
   const formatDateFromOCR = (dateStr: string): string => {
     try {
-      // Limpiar la fecha (puede tener espacios o caracteres extra)
-      const cleanDate = dateStr.trim().replace(/\s+/g, '');
+      // Quitar hora si viene "YYYY-MM-DD HH:mm:ss" o "YYYY/MM/DD HH:mm"
+      let s = dateStr.trim().replace(/\s+\d{1,2}:\d{2}(?::\d{2})?.*$/, '').trim();
+      const cleanDate = s.replace(/\s+/g, '');
       const parts = cleanDate.split(/[-/]/);
       
       if (parts.length === 3) {

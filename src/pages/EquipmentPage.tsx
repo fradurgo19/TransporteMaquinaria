@@ -13,7 +13,7 @@ import { supabase } from '../services/supabase';
 import { useEquipment, useEquipmentMutation } from '../hooks/useEquipment';
 import { uploadFile, compressImage } from '../services/uploadService';
 import { useDepartment } from '../hooks/useDepartment';
-import { useAlertRecipients } from '../hooks/useAlertRecipients';
+import { useAlertRecipients, isAlertRecipientsTableMissingError } from '../hooks/useAlertRecipients';
 
 interface Equipment {
   id: string;
@@ -109,7 +109,8 @@ export const EquipmentPage: React.FC = () => {
 
   const { createEquipment, updateEquipment } = useEquipmentMutation();
   const { department } = useDepartment();
-  const { data: alertRecipients, add: addRecipient, remove: removeRecipient, isAdding } = useAlertRecipients();
+  const { data: alertRecipients, error: alertRecipientsError, add: addRecipient, remove: removeRecipient, isAdding } = useAlertRecipients();
+  const alertRecipientsTableMissing = isAlertRecipientsTableMissingError(alertRecipientsError);
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -664,76 +665,99 @@ export const EquipmentPage: React.FC = () => {
                         <h3 className="font-semibold text-gray-900">Destinatarios de alertas</h3>
                         <p className="text-xs text-gray-500 mt-0.5">Vencimiento de documentos (10 y 5 días)</p>
                       </div>
-                      <div className="p-3 max-h-64 overflow-y-auto space-y-3">
-                        {['transport', 'logistics'].map((dept) => {
-                          const list = alertRecipients.filter((r) => r.department === dept);
-                          return (
-                            <div key={dept}>
-                              <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-                                {dept === 'transport' ? 'Transporte' : 'Logística'}
-                              </p>
-                              <ul className="space-y-1">
-                                {list.map((r) => (
-                                  <li
-                                    key={r.id}
-                                    className="flex items-center justify-between gap-2 text-sm py-1 px-2 rounded bg-gray-50"
-                                  >
-                                    <span className="truncate">{r.email}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeRecipient(r.id)}
-                                      className="text-red-600 hover:text-red-700 p-1"
-                                      title="Quitar"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                  </li>
-                                ))}
-                                {list.length === 0 && (
-                                  <li className="text-xs text-gray-400 py-1">Sin destinatarios</li>
-                                )}
-                              </ul>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-2">
-                        <div className="flex gap-2">
-                          <Select
-                            value={newRecipientDept}
-                            onChange={(e) => setNewRecipientDept(e.target.value as 'transport' | 'logistics')}
-                            options={[
-                              { value: 'transport', label: 'Transporte' },
-                              { value: 'logistics', label: 'Logística' },
-                            ]}
-                            className="flex-1 min-w-0"
-                          />
-                          <Input
-                            type="email"
-                            placeholder="email@ejemplo.com"
-                            value={newRecipientEmail}
-                            onChange={(e) => setNewRecipientEmail(e.target.value)}
-                            className="flex-1 min-w-0"
-                          />
+                      {alertRecipientsTableMissing ? (
+                        <div className="p-4 space-y-3">
+                          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            La tabla <code className="text-xs bg-amber-100 px-1 rounded">alert_email_recipients</code> no existe en Supabase.
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            1. En Supabase Dashboard → SQL Editor, ejecuta el contenido del archivo:
+                          </p>
+                          <p className="text-xs font-mono text-gray-600 bg-gray-100 p-2 rounded break-all" title="database/alert_email_recipients_setup.sql">
+                            database/alert_email_recipients_setup.sql
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            2. Si ya creaste la tabla y sigue el error, ejecuta también:
+                          </p>
+                          <p className="text-xs font-mono text-gray-600 bg-gray-100 p-2 rounded">NOTIFY pgrst, &apos;reload schema&apos;;</p>
+                          <p className="text-xs text-gray-500">
+                            Luego recarga esta página.
+                          </p>
                         </div>
-                        <Button
-                          size="sm"
-                          className="w-full"
-                          disabled={!newRecipientEmail.trim() || isAdding}
-                          onClick={async () => {
-                            const email = newRecipientEmail.trim();
-                            if (!email) return;
-                            try {
-                              await addRecipient({ department: newRecipientDept, email });
-                              setNewRecipientEmail('');
-                            } catch (err: any) {
-                              alert(err?.message || 'Error al agregar');
-                            }
-                          }}
-                        >
-                          {isAdding ? 'Agregando…' : 'Agregar destinatario'}
-                        </Button>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="p-3 max-h-64 overflow-y-auto space-y-3">
+                            {['transport', 'logistics'].map((dept) => {
+                              const list = (alertRecipients || []).filter((r) => r.department === dept);
+                              return (
+                                <div key={dept}>
+                                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+                                    {dept === 'transport' ? 'Transporte' : 'Logística'}
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {list.map((r) => (
+                                      <li
+                                        key={r.id}
+                                        className="flex items-center justify-between gap-2 text-sm py-1 px-2 rounded bg-gray-50"
+                                      >
+                                        <span className="truncate">{r.email}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeRecipient(r.id)}
+                                          className="text-red-600 hover:text-red-700 p-1"
+                                          title="Quitar"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </li>
+                                    ))}
+                                    {list.length === 0 && (
+                                      <li className="text-xs text-gray-400 py-1">Sin destinatarios</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-2">
+                            <div className="flex gap-2">
+                              <Select
+                                value={newRecipientDept}
+                                onChange={(e) => setNewRecipientDept(e.target.value as 'transport' | 'logistics')}
+                                options={[
+                                  { value: 'transport', label: 'Transporte' },
+                                  { value: 'logistics', label: 'Logística' },
+                                ]}
+                                className="flex-1 min-w-0"
+                              />
+                              <Input
+                                type="email"
+                                placeholder="email@ejemplo.com"
+                                value={newRecipientEmail}
+                                onChange={(e) => setNewRecipientEmail(e.target.value)}
+                                className="flex-1 min-w-0"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              disabled={!newRecipientEmail.trim() || isAdding}
+                              onClick={async () => {
+                                const email = newRecipientEmail.trim();
+                                if (!email) return;
+                                try {
+                                  await addRecipient({ department: newRecipientDept, email });
+                                  setNewRecipientEmail('');
+                                } catch (err: any) {
+                                  alert(err?.message || 'Error al agregar');
+                                }
+                              }}
+                            >
+                              {isAdding ? 'Agregando…' : 'Agregar destinatario'}
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

@@ -9,6 +9,24 @@ export interface AlertRecipient {
   created_at: string;
 }
 
+/** Verifica si el error indica que la tabla alert_email_recipients no existe. */
+export function isAlertRecipientsTableMissingError(e: unknown): boolean {
+  const msg = (e && typeof e === 'object' && 'message' in e)
+    ? String((e as { message?: string }).message)
+    : '';
+  const code = (e && typeof e === 'object' && 'code' in e)
+    ? String((e as { code?: string }).code)
+    : '';
+  const status = (e && typeof e === 'object' && 'status' in e)
+    ? Number((e as { status?: number }).status)
+    : 0;
+  return (
+    /alert_email_recipients|schema cache|Could not find the table|relation.*does not exist|42P01/i.test(msg) ||
+    code === '42P01' ||
+    status === 404
+  );
+}
+
 export function useAlertRecipients() {
   const queryClient = useQueryClient();
 
@@ -24,6 +42,10 @@ export function useAlertRecipients() {
       );
       if (result.error) throw result.error;
       return (result.data || []) as AlertRecipient[];
+    },
+    retry: (failureCount, error) => {
+      if (isAlertRecipientsTableMissingError(error)) return false;
+      return failureCount < 2;
     },
   });
 
