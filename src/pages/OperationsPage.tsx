@@ -258,9 +258,9 @@ export const OperationsPage: React.FC = () => {
         if (upload) photoUrl = upload.url;
       }
 
-      const driverName = selectedEquipment?.driver_name || user?.full_name || user?.username || 'Sin asignar';
+      const driverName = (selectedEquipment?.driver_name || user?.full_name || user?.username || user?.email || 'Conductor').trim() || 'Conductor';
 
-      // Guardar operación
+      // Guardar operación (driver_name NOT NULL en BD)
       const operationData: any = {
         vehicle_plate: vehiclePlate,
         driver_name: driverName,

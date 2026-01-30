@@ -57,13 +57,14 @@ export const ChecklistPage: React.FC = () => {
           .select('*')
           .order('check_date', { ascending: false })
           .limit(100);
-        if (department && departmentColumnExists !== false) {
+        // Solo filtrar por department cuando ya confirmamos que la columna existe (evita error 42703)
+        if (department && departmentColumnExists === true) {
           q = q.eq('department', department);
         }
         const { data, error } = await q;
 
         if (error) {
-          const isDeptError = /department|'department'/i.test(error.message || '');
+          const isDeptError = /department|'department'|42703/i.test(error.message || '');
           if (isDeptError) {
             setDepartmentColumnExists(false);
             const { data: data2, error: err2 } = await supabase
@@ -76,8 +77,15 @@ export const ChecklistPage: React.FC = () => {
             console.error('Error cargando checklists:', error);
           }
         } else {
-          setDepartmentColumnExists(true);
           setChecklists(data || []);
+          // Detectar si la columna department existe para el próximo load
+          if (departmentColumnExists === null) {
+            const { error: probeError } = await supabase
+              .from('pre_operational_checklists')
+              .select('department')
+              .limit(1);
+            setDepartmentColumnExists(!probeError);
+          }
         }
       } catch (error) {
         console.error('Error:', error);
@@ -87,7 +95,7 @@ export const ChecklistPage: React.FC = () => {
     };
 
     loadChecklists();
-  }, [department]);
+  }, [department, departmentColumnExists]);
 
   // Mapear checklists de Supabase al formato esperado
   const mappedChecklists = checklists.map((checklist) => ({

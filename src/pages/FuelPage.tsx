@@ -216,30 +216,37 @@ export const FuelPage: React.FC = () => {
       const endingKm = parseInt(formData.endingOdometer) || 0;
 
       // No insertar distance_traveled ni fuel_efficiency (GENERATED en BD)
-      const { data, error } = await supabase
-        .from('fuel_logs')
-        .insert([{
-          vehicle_plate: selectedEquipment.license_plate,
-          fuel_date: formData.fuelDate,
-          gallons,
-          cost,
-          starting_odometer: startingKm,
-          ending_odometer: endingKm,
-          gas_station_name: formData.gasStationName || null,
-          receipt_photo_path: photoUrl || null,
-          receipt_photo_url: photoUrl || null,
-          gps_latitude: latitude ?? 4.6097,
-          gps_longitude: longitude ?? -74.0817,
-          created_by: user.id,
-          department: 'transport',
-        }])
-        .select();
+      const basePayload = {
+        vehicle_plate: selectedEquipment.license_plate,
+        fuel_date: formData.fuelDate,
+        gallons,
+        cost,
+        starting_odometer: startingKm,
+        ending_odometer: endingKm,
+        gas_station_name: formData.gasStationName || null,
+        receipt_photo_path: photoUrl || null,
+        gps_latitude: latitude ?? 4.6097,
+        gps_longitude: longitude ?? -74.0817,
+        created_by: user.id,
+      };
+      let payload: Record<string, unknown> = {
+        ...basePayload,
+        receipt_photo_url: photoUrl || null,
+        department: 'transport',
+      };
+      let result = await supabase.from('fuel_logs').insert([payload]).select();
 
-      if (error) {
-        console.error('Error guardando:', error);
-        alert(`Error: ${error.message}`);
+      if (result.error && (result.error.code === '42703' || /department|receipt_photo_url/i.test(result.error.message || ''))) {
+        payload = basePayload;
+        result = await supabase.from('fuel_logs').insert([payload]).select();
+      }
+
+      if (result.error) {
+        console.error('Error guardando:', result.error);
+        alert(`Error: ${result.error.message}. Si falta la columna department o receipt_photo_url, ejecute database/fix_transport_standard_errors.sql en Supabase.`);
         return;
       }
+      const data = result.data;
 
       console.log('✅ Combustible guardado:', data);
       alert('✅ Registro de combustible guardado exitosamente');
