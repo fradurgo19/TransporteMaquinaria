@@ -156,8 +156,8 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
           
           hiddenTime = null;
         } else {
-          // Si no estaba oculta pero la app vuelve a estar visible, validar conexión y refrescar sesión
-          await ensureFreshSession();
+          // Ventana vuelve a estar visible sin haber registrado 'hidden' (p. ej. cambio de ventana en vez de pestaña).
+          // No llamar ensureFreshSession aquí para evitar redirecciones a /unauthorized al volver a la app.
         }
       }
     };

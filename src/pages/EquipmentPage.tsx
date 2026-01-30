@@ -810,7 +810,7 @@ export const EquipmentPage: React.FC = () => {
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">SOAT</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Póliza</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Licencia</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Permiso</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase min-w-[8rem]">Permiso</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                   </tr>
                 </thead>
@@ -1015,12 +1015,12 @@ export const EquipmentPage: React.FC = () => {
                       </td>
 
                       {/* PERMISO */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center min-w-[8rem]">
                         {isEditing ? (
                           <Input
                             value={editData.permit_status || ''}
                             onChange={(e) => setEditData({ ...editData, permit_status: e.target.value })}
-                            className="w-24 text-xs"
+                            className="min-w-[7rem] w-full max-w-[9rem] text-xs mx-auto"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{equip.permit_status}</span>
