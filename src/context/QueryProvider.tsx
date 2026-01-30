@@ -70,22 +70,13 @@ const runWithTimeout = async <T,>(
 
 /**
  * Valida conexión y refresca sesión de forma bloqueante y con timeout.
+ * No cierra sesión si falla: evita "Access Denied" al volver de otra pestaña (timeout/red lenta).
  */
 const ensureFreshSession = async (): Promise<boolean> => {
   // Validar conexión (máx 4s) pero no bloquear si falla
   await runWithTimeout(() => forceConnectionValidation(), 4000, true);
-  // Refrescar/validar sesión (máx 8s)
+  // Refrescar/validar sesión (máx 8s). Si falla o timeout, retornar false sin signOut
   const refreshed = await runWithTimeout(() => refreshSessionIfNeeded(), 8000, false);
-  if (!refreshed) {
-    // Si no se pudo refrescar, cerrar sesión para limpiar estado atascado
-    try {
-      await supabase.auth.signOut();
-      queryClient.cancelQueries();
-      queryClient.clear();
-    } catch {
-      // Ignorar
-    }
-  }
   return refreshed;
 };
 

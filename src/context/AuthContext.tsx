@@ -75,8 +75,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           userRole = userData.role;
         }
       } catch {
-        // Si falla o timeout, usar role de metadata o 'user' por defecto
-        userRole = authUser.user_metadata?.role || 'user';
+        // Si falla o timeout: metadata, o conservar rol actual si es el mismo usuario (evita downgrade logística → user)
+        userRole = authUser.user_metadata?.role || (user?.id === authUser.id ? user.role : null) || 'user';
       }
 
       const result = { data: authUser, error: null };
@@ -141,13 +141,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               metadata: authUser.user_metadata
             });
             
-            // Usar datos de auth.users directamente sin consultar public.users
-            // Esto evita timeouts adicionales
+            // Usar datos de auth.users directamente sin consultar public.users.
+            // Preservar rol actual si es el mismo usuario (evita que logística pase a 'user' por timeout).
+            const preservedRole = user?.id === authUser.id ? user.role : undefined;
             const fallbackUser: User = {
               id: authUser.id,
               username: authUser.user_metadata?.username || authUser.email?.split('@')[0] || 'user',
               email: authUser.email || '',
-              role: (authUser.user_metadata?.role as UserRole) || 'user',
+              role: (authUser.user_metadata?.role as UserRole) || preservedRole || 'user',
               full_name: authUser.user_metadata?.full_name || '',
               phone: authUser.user_metadata?.phone || '',
               createdAt: authUser.created_at || new Date().toISOString(),
