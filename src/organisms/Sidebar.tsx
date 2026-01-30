@@ -180,13 +180,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggleC
                 <Truck className="h-4 w-4 text-primary mr-2" />
                 <span className="text-xs font-medium text-primary-900">Equipo Actual</span>
               </div>
-              <button
-                onClick={handleChangeEquipment}
-                className="text-primary hover:text-primary-700 p-1"
-                title="Cambiar equipo"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </button>
+              {user?.role === 'admin' && (
+                <button
+                  onClick={handleChangeEquipment}
+                  className="text-primary hover:text-primary-700 p-1"
+                  title="Cambiar equipo (solo admin de transporte)"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+              )}
             </div>
             <p className="text-sm font-bold text-primary-900">
               {selectedEquipment.license_plate}

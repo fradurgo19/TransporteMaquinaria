@@ -580,14 +580,14 @@ export const OperationHoursPage: React.FC = () => {
               <div className="text-center md:text-left">
                 <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
                   <p className="text-sm text-gray-600">Vehículo</p>
-                  {(user?.role === 'user' || user?.role === 'guest') && selectedEquipment && (
+                  {user?.role === 'admin' && selectedEquipment && (
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
                       onClick={() => navigate('/equipment-selection')}
                       className="text-primary-600 hover:text-primary-700"
-                      title="Cambiar a otro equipo asignado"
+                      title="Cambiar equipo (solo admin de transporte)"
                     >
                       <Truck className="h-4 w-4 mr-1" />
                       Cambiar equipo
