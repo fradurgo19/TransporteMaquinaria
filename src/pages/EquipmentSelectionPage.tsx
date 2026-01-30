@@ -22,10 +22,12 @@ interface Equipment {
 export const EquipmentSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { selectEquipment, autoSelectAssignedEquipment } = useEquipment();
+  const { selectEquipment, autoSelectAssignedEquipment, selectedEquipment: currentEquipment } = useEquipment();
   const { department } = useDepartment();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAutoSelecting, setIsAutoSelecting] = useState(true);
+  // Si el usuario ya tiene equipo seleccionado, viene en modo "Cambiar equipo": mostrar lista sin auto-redirigir
+  const isChangeEquipmentMode = !!currentEquipment;
 
   // Usar hook optimizado que incluye autenticación automáticamente
   // El hook ya filtra por departamento automáticamente
@@ -50,20 +52,28 @@ export const EquipmentSelectionPage: React.FC = () => {
     }
   }, [user, department, equipment.length]);
 
-  // Auto-seleccionar vehículo asignado al usuario
+  // En modo "Cambiar equipo" (usuario ya tiene equipo): mostrar lista, no auto-redirigir
   React.useEffect(() => {
+    if (isChangeEquipmentMode) {
+      setIsAutoSelecting(false);
+      return;
+    }
+  }, [isChangeEquipmentMode]);
+
+  // Auto-seleccionar vehículo asignado solo cuando el usuario NO tiene equipo (primera vez / no modo cambio)
+  React.useEffect(() => {
+    if (isChangeEquipmentMode) return;
+
     const tryAutoSelect = async () => {
       if (user?.id && isAutoSelecting) {
         try {
-          // Timeout para evitar que se quede colgado
-          const timeoutPromise = new Promise<boolean>((_, reject) => 
+          const timeoutPromise = new Promise<boolean>((_, reject) =>
             setTimeout(() => reject(new Error('Auto-select timeout')), 10000)
           );
 
           const selectPromise = autoSelectAssignedEquipment(user.id);
-          
           const assigned = await Promise.race([selectPromise, timeoutPromise]) as boolean;
-          
+
           if (assigned) {
             console.log('✅ Vehículo asignado automáticamente, redirigiendo...');
             navigate('/');
@@ -72,7 +82,6 @@ export const EquipmentSelectionPage: React.FC = () => {
           }
         } catch (error: any) {
           console.warn('⚠️ Error o timeout en auto-selección:', error?.message || error);
-          // Si hay error o timeout, simplemente mostrar el selector
           console.log('ℹ️ Mostrando selector de equipos debido a error/timeout');
         } finally {
           setIsAutoSelecting(false);
@@ -80,13 +89,9 @@ export const EquipmentSelectionPage: React.FC = () => {
       }
     };
 
-    // Solo intentar auto-seleccionar si:
-    // 1. No está cargando Y hay equipos disponibles, O
-    // 2. Ha pasado un tiempo razonable (5 segundos) sin cargar (para evitar quedarse colgado)
     if (!isLoading && equipment.length > 0) {
       tryAutoSelect();
     } else if (isAutoSelecting) {
-      // Timeout de seguridad: si después de 5 segundos aún está cargando, mostrar selector
       const timeoutId = setTimeout(() => {
         if (isAutoSelecting) {
           console.warn('⏱️ Timeout esperando equipos, mostrando selector...');
@@ -96,7 +101,7 @@ export const EquipmentSelectionPage: React.FC = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [user, isLoading, equipment.length, isAutoSelecting, navigate]);
+  }, [user, isLoading, equipment.length, isAutoSelecting, navigate, isChangeEquipmentMode]);
 
   const handleLogout = async () => {
     try {
@@ -149,13 +154,15 @@ export const EquipmentSelectionPage: React.FC = () => {
     }
   };
 
-  if (isLoading || isAutoSelecting) {
+  // En modo "Cambiar equipo" no mostrar loader de auto-selección; solo esperar datos si hace falta
+  const showLoader = isChangeEquipmentMode ? isLoading : (isLoading || isAutoSelecting);
+  if (showLoader) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center">
         <div className="text-center">
           <Loader className="h-12 w-12 text-primary animate-spin mx-auto mb-4" />
           <p className="text-gray-600">
-            {isAutoSelecting ? 'Verificando vehículo asignado...' : 'Cargando equipos...'}
+            {isChangeEquipmentMode ? 'Cargando equipos...' : (isAutoSelecting ? 'Verificando vehículo asignado...' : 'Cargando equipos...')}
           </p>
         </div>
       </div>
@@ -228,7 +235,7 @@ export const EquipmentSelectionPage: React.FC = () => {
             <Truck className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Selecciona tu Equipo
+            {isChangeEquipmentMode ? 'Cambiar equipo' : 'Selecciona tu Equipo'}
           </h1>
           <p className="text-gray-600">
             Hola <span className="font-semibold">{user?.username}</span>, elige el vehículo que operarás hoy
