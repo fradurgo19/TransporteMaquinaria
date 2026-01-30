@@ -24,16 +24,18 @@ interface OperationHoursQueryParams {
   page?: number;
   limit?: number;
   status?: string;
+  /** Filtrar por departamento: 'transport' (estándar) o 'logistics'. Admin estándar ve solo transport, admin logística solo logistics, usuarios solo su departamento. */
+  department?: 'transport' | 'logistics';
 }
 
 /**
  * Hook optimizado para obtener horas de operación
  */
 export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
-  const { vehiclePlate, driverName, page = 1, limit = QUERY_LIMITS.OPERATION_HOURS, status } = params;
+  const { vehiclePlate, driverName, page = 1, limit = QUERY_LIMITS.OPERATION_HOURS, status, department } = params;
 
   return useQuery({
-    queryKey: ['operation_hours', vehiclePlate, driverName, page, limit, status],
+    queryKey: ['operation_hours', vehiclePlate, driverName, page, limit, status, department],
     queryFn: async () => {
       // Timeout para evitar que la query se quede colgada
       const timeoutPromise = new Promise((_, reject) => 
@@ -55,6 +57,11 @@ export const useOperationHours = (params: OperationHoursQueryParams = {}) => {
           .from('operation_hours')
           .select('*', { count: 'exact' })
           .order('check_in_time', { ascending: false });
+
+      // Filtrar por departamento: transport (estándar) vs logistics. Admin estándar solo ve transport, admin logística solo logistics.
+      if (department) {
+        query = query.eq('department', department);
+      }
 
       // Filtrar por placa si se proporciona
       if (vehiclePlate) {

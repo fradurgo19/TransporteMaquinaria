@@ -56,6 +56,7 @@ export const useOvertimeTracking = (params: OvertimeQueryParams = {}) => {
         throw new Error('No hay sesión activa');
       }
 
+      // Solo registros estándar (transport). No mostrar registros de logística (admin ni conductores).
       let query = supabase
         .from('overtime_tracking')
         .select('*', { count: 'exact' })

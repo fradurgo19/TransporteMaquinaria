@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { format, parseISO, startOfDay, setHours, setMinutes, setSeconds } from 'date-fns';
 import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
+import { useDepartment } from '../hooks/useDepartment';
 import { supabase } from '../services/supabase';
 import { useEquipment as useEquipmentHook } from '../hooks/useEquipment';
 import { Select } from '../atoms/Select';
@@ -35,8 +36,9 @@ interface OperationHour {
 }
 
 export const OperationHoursPage: React.FC = () => {
-  useProtectedRoute(['admin', 'user']);
+  useProtectedRoute(['admin', 'user', 'admin_logistics', 'logistics']);
   const { user } = useAuth();
+  const { department } = useDepartment();
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude } = useGeolocation();
   const [showManualForm, setShowManualForm] = useState(false);
@@ -50,10 +52,11 @@ export const OperationHoursPage: React.FC = () => {
   });
   const [driverFilter, setDriverFilter] = useState('');
 
-  // Admins ven todos los registros, usuarios solo los de su vehículo
+  // Admins ven todos los registros de su departamento; usuarios solo los de su vehículo
+  // admin@partequipos.com (admin) → department 'transport' → solo registros estándar
+  // admin.logistica@partequipos.com (admin_logistics) → department 'logistics' → solo logística
   const isAdmin = user?.role === 'admin' || user?.role === 'admin_logistics';
   
-  // Usar hooks optimizados de React Query
   const { 
     data: operationHoursData, 
     isLoading, 
@@ -61,6 +64,7 @@ export const OperationHoursPage: React.FC = () => {
     isError,
     refetch: refetchOperationHours
   } = useOperationHours({
+    department,
     vehiclePlate: isAdmin ? undefined : selectedEquipment?.license_plate,
     driverName: driverFilter || undefined,
   });
@@ -192,9 +196,9 @@ export const OperationHoursPage: React.FC = () => {
           ? 'Día Compensatorio' 
           : (manualFormData.notes || 'Registro manual por admin'),
         activity_type: 'regular',
-        // Campos de ubicación GPS (requeridos NOT NULL en el schema)
-        location_latitude: latitude || 4.6097, // Bogotá por defecto si no hay GPS
-        location_longitude: longitude || -74.0817, // Bogotá por defecto si no hay GPS
+        department, // transport (estándar) o logistics según el admin que crea
+        location_latitude: latitude || 4.6097,
+        location_longitude: longitude || -74.0817,
         created_by: user?.id,
       };
 

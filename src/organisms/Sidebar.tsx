@@ -64,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggleC
       path: '/operation-hours',
       label: 'Horas de Operación',
       icon: Clock,
-      roles: ['admin', 'user'], // Operadores y admins
+      roles: ['admin', 'user', 'admin_logistics', 'logistics'], // Estándar y logística (cada uno ve su departamento)
     },
     {
       path: '/overtime-tracking',
