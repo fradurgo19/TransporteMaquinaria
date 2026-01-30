@@ -12,7 +12,7 @@ import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { format, parseISO, startOfDay, setHours, setMinutes, setSeconds } from 'date-fns';
+import { format, parseISO, startOfDay, setHours, setMinutes, setSeconds, subDays } from 'date-fns';
 import { useOperationHours, useActiveOperationHour, useOperationHoursMutation } from '../hooks/useOperationHours';
 import { useDepartment } from '../hooks/useDepartment';
 import { supabase } from '../services/supabase';
@@ -87,6 +87,80 @@ export const OperationHoursPage: React.FC = () => {
   
   const vehiclesList = equipmentListData?.data || [];
   const uniqueDrivers = [...new Set(vehiclesList.map(v => v.driver_name))].filter(Boolean);
+
+  // Registrar automáticamente como compensatorios los días laborales (Lun–Vie) en que el operador no inició jornada
+  const compensatorySyncDone = React.useRef(false);
+  React.useEffect(() => {
+    if (isAdmin || !selectedEquipment?.license_plate || !user) return;
+    if (compensatorySyncDone.current) return;
+
+    const runSync = async () => {
+      compensatorySyncDone.current = true;
+      const driverName = user.full_name || user.username || user.email || '';
+      const vehiclePlate = selectedEquipment.license_plate;
+      const today = startOfDay(new Date());
+      const endDate = subDays(today, 1); // Hasta ayer (no incluir hoy: el operador puede aún iniciar jornada)
+      const startDate = subDays(today, 30); // Últimos 30 días
+
+      try {
+        const { data: existing } = await supabase
+          .from('operation_hours')
+          .select('check_in_time')
+          .eq('vehicle_plate', vehiclePlate)
+          .eq('driver_name', driverName)
+          .gte('check_in_time', startDate.toISOString())
+          .lte('check_in_time', endDate.toISOString());
+
+        const existingDates = new Set(
+          (existing || []).map((r: { check_in_time: string }) => format(new Date(r.check_in_time), 'yyyy-MM-dd'))
+        );
+
+        const lat = latitude ?? 4.6097;
+        const lng = longitude ?? -74.0817;
+        let inserted = 0;
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const dayOfWeek = d.getDay(); // 0 = Dom, 1 = Lun, ..., 6 = Sáb
+          if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Solo días laborales Lun–Vie
+          const dateStr = format(d, 'yyyy-MM-dd');
+          if (existingDates.has(dateStr)) continue;
+
+          const dayStart = `${dateStr}T00:00:00.000Z`;
+          const payload: Record<string, unknown> = {
+            vehicle_plate: vehiclePlate,
+            driver_name: driverName,
+            check_in_time: dayStart,
+            check_out_time: dayStart,
+            task_description: 'Día compensatorio (sin jornada)',
+            activity_type: 'regular',
+            status: 'completed',
+            location_latitude: lat,
+            location_longitude: lng,
+            is_compensatory: true,
+            notes: 'Registro automático: día sin iniciar jornada',
+            created_by: user.id,
+          };
+          if (department) (payload as Record<string, unknown>).department = department;
+
+          try {
+            const { error } = await supabase.from('operation_hours').insert([payload]).select();
+            if (!error) inserted++;
+          } catch (_) {
+            // Si falla una inserción (ej. columna inexistente), seguir con el resto
+          }
+        }
+
+        if (inserted > 0) {
+          queryClient.invalidateQueries({ queryKey: ['operation_hours'] });
+        }
+      } catch (e) {
+        compensatorySyncDone.current = false;
+        console.warn('Sync compensatorios:', e);
+      }
+    };
+
+    runSync();
+  }, [isAdmin, selectedEquipment?.license_plate, user, department, latitude, longitude, queryClient]);
 
   // Cierre automático de jornadas olvidadas a las 6:00 PM
   React.useEffect(() => {
