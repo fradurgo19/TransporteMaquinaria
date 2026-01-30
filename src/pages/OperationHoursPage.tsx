@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../templates/MainLayout';
 import { Card, CardHeader, CardBody } from '../atoms/Card';
 import { Button } from '../atoms/Button';
@@ -6,7 +7,7 @@ import { Badge } from '../atoms/Badge';
 import { Input } from '../atoms/Input';
 import { TextArea } from '../atoms/TextArea';
 import { DataTable } from '../organisms/DataTable';
-import { Clock, CheckCircle, Plus, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, Plus, X, RefreshCw, AlertCircle, Truck } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { useEquipment } from '../context/EquipmentContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +38,7 @@ interface OperationHour {
 
 export const OperationHoursPage: React.FC = () => {
   useProtectedRoute(['admin', 'user', 'admin_logistics', 'logistics']);
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { department } = useDepartment();
   const { selectedEquipment } = useEquipment();
@@ -502,7 +504,22 @@ export const OperationHoursPage: React.FC = () => {
             <div className="flex flex-col md:flex-row items-center justify-center gap-4 py-6">
               {/* Información del equipo */}
               <div className="text-center md:text-left">
-                <p className="text-sm text-gray-600">Vehículo</p>
+                <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
+                  <p className="text-sm text-gray-600">Vehículo</p>
+                  {(user?.role === 'user' || user?.role === 'guest') && selectedEquipment && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigate('/equipment-selection')}
+                      className="text-primary-600 hover:text-primary-700"
+                      title="Cambiar a otro equipo asignado"
+                    >
+                      <Truck className="h-4 w-4 mr-1" />
+                      Cambiar equipo
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xl font-bold text-gray-900">{selectedEquipment?.license_plate}</p>
                 <p className="text-sm text-gray-600">{user?.full_name || user?.username}</p>
                 {latitude && longitude && (
