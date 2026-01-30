@@ -177,6 +177,10 @@ export const ChecklistPage: React.FC = () => {
                   alert('Selecciona un equipo primero');
                   return;
                 }
+                if (!latitude || !longitude) {
+                  alert('La ubicación es obligatoria. Autoriza el acceso a la ubicación en el navegador e intenta de nuevo.');
+                  return;
+                }
 
                 setIsUploading(true);
                 
@@ -211,18 +215,30 @@ export const ChecklistPage: React.FC = () => {
                     vehicle_condition_assessment: assessment,
                     passed: formData.passed,
                     photo_url: photoUrl || null,
-                    location_latitude: latitude ?? 4.6097,
-                    location_longitude: longitude ?? -74.0817,
+                    location_latitude: latitude,
+                    location_longitude: longitude,
                     created_by: user.id,
                   };
                   if (departmentColumnExists !== false && department) {
                     payload.department = department;
                   }
 
-                  const { data, error } = await supabase
-                    .from('pre_operational_checklists')
-                    .insert([payload])
-                    .select();
+                  const doInsert = (p: Record<string, unknown>) =>
+                    supabase.from('pre_operational_checklists').insert([p]).select();
+
+                  let result = await doInsert(payload);
+                  let { data, error } = result;
+
+                  // Si falla por columnas de ubicación inexistentes, reintentar sin ellas
+                  const isLocationColumnError = /location_latitude|location_longitude|schema cache|42703/i.test(error?.message || '');
+                  if (error && isLocationColumnError) {
+                    const retryPayload = { ...payload };
+                    delete retryPayload.location_latitude;
+                    delete retryPayload.location_longitude;
+                    result = await doInsert(retryPayload);
+                    data = result.data;
+                    error = result.error;
+                  }
 
                   if (error) {
                     const isDeptError = /department|'department'/i.test(error.message || '');
@@ -230,6 +246,10 @@ export const ChecklistPage: React.FC = () => {
                       setDepartmentColumnExists(false);
                       const retry = { ...payload };
                       delete retry.department;
+                      if (retry.location_latitude !== undefined) {
+                        delete retry.location_latitude;
+                        delete retry.location_longitude;
+                      }
                       const { error: err2 } = await supabase
                         .from('pre_operational_checklists')
                         .insert([retry])
@@ -263,7 +283,7 @@ export const ChecklistPage: React.FC = () => {
                       setShowForm(false);
                     } else {
                       console.error('Error guardando:', error);
-                      alert(`Error: ${error.message}`);
+                      alert(`Error: ${error.message}. Ejecute database/fix_checklists_location_columns.sql en Supabase si menciona location_latitude.`);
                       return;
                     }
                   } else {
@@ -322,29 +342,36 @@ export const ChecklistPage: React.FC = () => {
                       <p className="text-sm font-semibold" style={{ color: '#50504f' }}>{format(new Date(), 'dd/MM/yyyy')}</p>
                     </div>
                   </div>
-                  {/* GPS compacto */}
-                  <div className="mt-2 pt-2 flex items-center justify-between" style={{ borderTop: '1px solid #50504f' }}>
-                    <div className="flex items-center text-xs">
-                      <MapPin className={`h-3 w-3 mr-1 ${latitude && longitude ? 'text-green-600' : 'text-yellow-600'}`} />
-                      {geoLoading ? (
-                        <span style={{ color: '#50504f' }}>Obteniendo ubicación...</span>
-                      ) : latitude && longitude ? (
-                        <span className="text-green-700">
-                          GPS: {latitude.toFixed(4)}, {longitude.toFixed(4)}
-                        </span>
-                      ) : (
-                        <span className="text-yellow-700">{geoError || 'GPS no disponible'}</span>
+                  {/* GPS obligatorio para registrar el checklist */}
+                  <div className="mt-2 pt-2" style={{ borderTop: '1px solid #50504f' }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-xs">
+                        <MapPin className={`h-3 w-3 mr-1 ${latitude && longitude ? 'text-green-600' : 'text-red-600'}`} />
+                        {geoLoading ? (
+                          <span style={{ color: '#50504f' }}>Obteniendo ubicación...</span>
+                        ) : latitude && longitude ? (
+                          <span className="text-green-700">
+                            GPS: {latitude.toFixed(4)}, {longitude.toFixed(4)}
+                          </span>
+                        ) : (
+                          <span className="text-red-700">{geoError || 'GPS no disponible'}</span>
+                        )}
+                      </div>
+                      {!geoLoading && (
+                        <button
+                          type="button"
+                          onClick={refreshLocation}
+                          className="text-xs font-medium hover:opacity-80"
+                          style={{ color: '#cf1b22' }}
+                        >
+                          Actualizar
+                        </button>
                       )}
                     </div>
-                    {!geoLoading && (
-                      <button
-                        type="button"
-                        onClick={refreshLocation}
-                        className="text-xs font-medium hover:opacity-80"
-                        style={{ color: '#cf1b22' }}
-                      >
-                        Actualizar
-                      </button>
+                    {(!latitude || !longitude) && !geoLoading && (
+                      <p className="text-xs text-red-600 mt-1 font-medium">
+                        La ubicación es obligatoria para registrar el checklist.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -508,13 +535,15 @@ export const ChecklistPage: React.FC = () => {
                     size="sm"
                     className="text-white hover:opacity-90"
                     style={{ backgroundColor: '#cf1b22' }}
-                    disabled={isUploading}
+                    disabled={isUploading || !latitude || !longitude || geoLoading}
                   >
                     {isUploading ? (
                       <>
                         <Loader className="h-4 w-4 mr-2 animate-spin" />
                         Guardando...
                       </>
+                    ) : !latitude || !longitude ? (
+                      'Ubicación requerida'
                     ) : (
                       'Guardar Inspección'
                     )}

@@ -235,7 +235,7 @@ export const EquipmentSelectionPage: React.FC = () => {
             <Truck className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isChangeEquipmentMode ? 'Cambiar equipo' : 'Selecciona tu Equipo'}
+            Selecciona tu Equipo
           </h1>
           <p className="text-gray-600">
             Hola <span className="font-semibold">{user?.username}</span>, elige el vehículo que operarás hoy

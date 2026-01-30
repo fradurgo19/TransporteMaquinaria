@@ -149,20 +149,22 @@ export const useOCR = () => {
         }
       }
 
-      // ---- PRECIO UNITARIO (antes de usarlo para costo) ----
+      // ---- PRECIO UNITARIO (ej. Precio: $11190 en tirillas tipo Gigante) ----
       const pricePatterns: RegExp[] = [
+        /precio[:\s]*\$?\s*(\d+)/i,   // Precio: $11190 sin separador de miles
         /precio[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /(?:vr\.?\s*unitario|valor\s*unitario|cant\.?\s*vr\.?\s*unitario)[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*\/?\s*gal\b/i,
-        /gal[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*\/?\s*l\b/i,
+        /(?:vr\.?\s*unitario|valor\s*unitario|cant\.?\s*vr\.?\s*unitario)[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+        /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)\s*\/?\s*gal\b/i,
+        /gal[:\s]*\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+        /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)\s*\/?\s*l\b/i,
       ];
       let pricePerUnit = '';
       let isPricePerLiter = false;
       for (const p of pricePatterns) {
         const m = text.match(p);
         if (m) {
-          const parsed = parseMoney(m[1]);
+          const raw = (m[1] || '').replace(/\s/g, '');
+          const parsed = parseMoney(raw);
           if (parsed && parsed.num >= 1000 && parsed.num <= 100000) {
             pricePerUnit = parsed.value;
             const mt = m[0].toLowerCase();
@@ -178,22 +180,38 @@ export const useOCR = () => {
         pricePerGallon = isPricePerLiter ? (n * 3.78541).toFixed(2) : n.toFixed(2);
       }
 
-      // ---- VALOR TANQUEO: "Total a Pagar" (prioridad) o "Total" / "Valor" ----
-      // "Total a Pagar" suele estar al final; "Total Valor Bruto" etc. antes. Buscar "Total a Pagar" en todo el texto primero.
+      // ---- VALOR TANQUEO (TOTAL) ----
+      // Tirillas tipo Gigante/Terpel: "TOTAL: $177261" o "TOTAL $177261" (sin separador de miles).
+      // Prioridad: Total a Pagar > TOTAL: $N > Total/Valor con número flexible.
       const totalAPagarPatterns = [
-        /total\s+a\s+pagar[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /total\s+a\s+pagar[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /total\s+a\s+pagar[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+        /total\s+a\s+pagar[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+      ];
+      // TOTAL con número sin separadores (ej. TOTAL: $177261) — muy común en tirillas colombianas
+      const totalSimplePatterns = [
+        /total[:\s]*\$?\s*(\d+)/i,
+        /total[:\s]+\$?\s*(\d+)/i,
+        /totai[:\s]*\$?\s*(\d+)/i,   // OCR suele confundir L con I
+        /tota1[:\s]*\$?\s*(\d+)/i,   // OCR suele confundir L con 1
       ];
       const totalPatterns = [
-        /total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /total[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /valor[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
-        /valor\s+total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)/i,
+        /total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+        /total[:\s]+(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+        /valor\s*tanqueo[:\s]*\$?\s*(\d+)/i,
+        /valor[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
+        /valor\s+total[:\s]+\$?\s*(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+)/i,
       ];
       let cost = '';
       const tryCost = (m: RegExpMatchArray, label: string): boolean => {
-        const parsed = parseMoney(m[1]);
-        if (parsed && parsed.num >= 1000 && parsed.num <= 20000000) {
+        const raw = m[1].replace(/\s/g, '');
+        const parsed = parseMoney(raw);
+        if (!parsed) return false;
+        if (parsed.num >= 1000 && parsed.num <= 20000000) {
+          cost = parsed.value;
+          console.log('✅ Valor tanqueo:', cost, label);
+          return true;
+        }
+        if (parsed.num >= 100 && parsed.num <= 20000000 && /total|valor/i.test(m[0])) {
           cost = parsed.value;
           console.log('✅ Valor tanqueo:', cost, label);
           return true;
@@ -203,6 +221,12 @@ export const useOCR = () => {
       for (const p of totalAPagarPatterns) {
         const m = text.match(p);
         if (m && tryCost(m, 'Total a Pagar')) break;
+      }
+      if (!cost) {
+        for (const p of totalSimplePatterns) {
+          const m = text.match(p);
+          if (m && tryCost(m, 'TOTAL')) break;
+        }
       }
       if (!cost) {
         const tail = text.slice(-Math.max(800, Math.floor(text.length * 0.35)));
