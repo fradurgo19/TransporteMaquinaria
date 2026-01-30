@@ -230,7 +230,8 @@ export const ManufacturerKPGPage: React.FC = () => {
               <div className="text-center py-12">
                 <Fuel className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 mb-2">No hay registros de KPG de fábrica</p>
-                <p className="text-sm text-gray-400">Haz clic en "Nuevo KPG de Fábrica" para agregar uno</p>
+                <p className="text-sm text-gray-400 mb-2">Haz clic en &quot;Nuevo KPG de Fábrica&quot; para agregar uno</p>
+                <p className="text-xs text-amber-600 max-w-md mx-auto">Si aparece el error &quot;Could not find the table manufacturer_kpg&quot;, ejecute <code className="bg-gray-100 px-1 rounded">database/manufacturer_kpg_setup.sql</code> en el editor SQL de Supabase.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">

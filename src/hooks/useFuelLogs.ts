@@ -29,16 +29,18 @@ interface FuelLogQueryParams {
   startDate?: string;
   endDate?: string;
   vehiclePlate?: string;
+  /** Filtrar por departamento: transport (estándar) o logistics. RLS también restringe por rol. */
+  department?: 'transport' | 'logistics';
 }
 
 /**
  * Hook para obtener registros de combustible
  */
 export const useFuelLogs = (params: FuelLogQueryParams = {}) => {
-  const { page = 1, limit = 50, startDate, endDate, vehiclePlate } = params;
+  const { page = 1, limit = 50, startDate, endDate, vehiclePlate, department } = params;
 
   return useQuery({
-    queryKey: ['fuel_logs', page, limit, startDate, endDate, vehiclePlate],
+    queryKey: ['fuel_logs', page, limit, startDate, endDate, vehiclePlate, department],
     queryFn: async () => {
       // Timeout para evitar que la query se quede colgada
       const timeoutPromise = new Promise((_, reject) => 
@@ -58,6 +60,10 @@ export const useFuelLogs = (params: FuelLogQueryParams = {}) => {
           .select('*', { count: 'exact' })
           .order('fuel_date', { ascending: false })
           .order('created_at', { ascending: false });
+
+        if (department) {
+          query = query.eq('department', department);
+        }
 
         if (startDate) {
           query = query.gte('fuel_date', startDate);

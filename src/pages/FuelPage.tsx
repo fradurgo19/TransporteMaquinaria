@@ -15,8 +15,9 @@ import { uploadFile, compressImage } from '../services/uploadService';
 import { supabase } from '../services/supabase';
 
 export const FuelPage: React.FC = () => {
-  useProtectedRoute(['admin', 'user']);
+  useProtectedRoute(['admin', 'user', 'admin_logistics', 'logistics']);
   const { user } = useAuth();
+  const department = (user?.role === 'admin_logistics' || user?.role === 'logistics') ? 'logistics' : 'transport';
   const { selectedEquipment } = useEquipment();
   const { latitude, longitude } = useGeolocation();
   const { extractDataFromReceipt, isProcessing, progress } = useOCR();
@@ -37,6 +38,7 @@ export const FuelPage: React.FC = () => {
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     vehiclePlate: placaFilter || undefined,
+    department,
   });
 
   const updateMutation = useUpdateFuelLog();
@@ -232,7 +234,7 @@ export const FuelPage: React.FC = () => {
       let payload: Record<string, unknown> = {
         ...basePayload,
         receipt_photo_url: photoUrl || null,
-        department: 'transport',
+        department,
       };
       let result = await supabase.from('fuel_logs').insert([payload]).select();
 

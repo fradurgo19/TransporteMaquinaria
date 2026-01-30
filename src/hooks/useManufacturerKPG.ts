@@ -28,6 +28,11 @@ interface ManufacturerKPGForm {
 /**
  * Hook para obtener todos los registros de KPG de fábrica
  */
+const isTableNotFoundError = (err: { code?: string; message?: string } | null) =>
+  err &&
+  (err.code === '42P01' ||
+    /manufacturer_kpg|schema cache|relation.*does not exist/i.test(err.message || ''));
+
 export const useManufacturerKPG = () => {
   return useQuery({
     queryKey: ['manufacturer-kpg'],
@@ -42,6 +47,10 @@ export const useManufacturerKPG = () => {
       );
 
       if (result.error) {
+        if (isTableNotFoundError(result.error)) {
+          console.warn('Tabla manufacturer_kpg no disponible. Ejecute database/manufacturer_kpg_setup.sql en Supabase.');
+          return [];
+        }
         console.error('Error fetching manufacturer KPG:', result.error);
         throw result.error;
       }
@@ -49,6 +58,7 @@ export const useManufacturerKPG = () => {
       return (Array.isArray(result.data) ? result.data : []) as ManufacturerKPG[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: (failureCount, error: any) => !isTableNotFoundError(error) && failureCount < 2,
   });
 };
 
@@ -78,6 +88,7 @@ export const useManufacturerKPGSearch = (criteria: {
       const result = await executeSupabaseQuery(async () => await query.order('kpg', { ascending: false }));
 
       if (result.error) {
+        if (isTableNotFoundError(result.error)) return [];
         console.error('Error searching manufacturer KPG:', result.error);
         throw result.error;
       }
@@ -106,6 +117,9 @@ export const useManufacturerKPGMutation = () => {
       );
 
       if (result.error) {
+        if (isTableNotFoundError(result.error)) {
+          throw new Error('La tabla KPG de fábrica no está disponible. Ejecute database/manufacturer_kpg_setup.sql en Supabase.');
+        }
         console.error('Error creating manufacturer KPG:', result.error);
         throw result.error;
       }
@@ -129,6 +143,9 @@ export const useManufacturerKPGMutation = () => {
       );
 
       if (result.error) {
+        if (isTableNotFoundError(result.error)) {
+          throw new Error('La tabla KPG de fábrica no está disponible. Ejecute database/manufacturer_kpg_setup.sql en Supabase.');
+        }
         console.error('Error updating manufacturer KPG:', result.error);
         throw result.error;
       }
@@ -150,6 +167,9 @@ export const useManufacturerKPGMutation = () => {
       );
 
       if (result.error) {
+        if (isTableNotFoundError(result.error)) {
+          throw new Error('La tabla KPG de fábrica no está disponible. Ejecute database/manufacturer_kpg_setup.sql en Supabase.');
+        }
         console.error('Error deleting manufacturer KPG:', result.error);
         throw result.error;
       }

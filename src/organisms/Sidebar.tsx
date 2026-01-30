@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed = false, onToggleC
       path: '/fuel',
       label: 'Combustible',
       icon: Fuel,
-      roles: ['admin', 'user'], // Operadores y admins
+      roles: ['admin', 'user', 'admin_logistics', 'logistics'], // Transporte y logística (cada uno ve su departamento)
     },
     {
       path: '/operations',
