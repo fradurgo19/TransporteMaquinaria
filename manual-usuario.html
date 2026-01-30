@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Operador | Partequipos S.A.S</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #cf1b22 0%, #a0151a 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .section {
+            background: #FFFFFF;
+            padding: 30px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #cf1b22;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #cf1b22;
+        }
+        .section h3 {
+            color: #50504f;
+            font-size: 1.4em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .module {
+            background: #fafafa;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #cf1b22;
+            border-radius: 5px;
+        }
+        .module h4 {
+            color: #50504f;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .module ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        .module li {
+            margin: 8px 0;
+        }
+        .step {
+            background: #fff5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #cf1b22;
+        }
+        .step-number {
+            display: inline-block;
+            background: #cf1b22;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .info {
+            background: #fff5f5;
+            border-left: 4px solid #cf1b22;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        table th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #50504f;
+        }
+        .icon {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📗 Manual de Usuario - Operador</h1>
+            <p>Sistema de Gestión de Transporte de Maquinaria - Partequipos S.A.S</p>
+        </header>
+
+        <div class="section">
+            <h2>🚀 Inicio de Sesión</h2>
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Ingresa a la aplicación</strong> usando tu navegador web
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Credenciales de acceso:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Email: <code>user1@partequipos.com</code></li>
+                    <li>Contraseña: <code>Password123!</code></li>
+                </ul>
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Haz clic en "Sign In"</strong> para acceder al sistema
+            </div>
+            <div class="info">
+                <strong>💡 Nota:</strong> Al iniciar sesión, primero deberás seleccionar el equipo (vehículo) con el que trabajarás.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚛 Selección de Equipo</h2>
+            <div class="module">
+                <h4><span class="icon">🎯</span> Primer Paso</h4>
+                <p>Después de iniciar sesión, el sistema te pedirá que selecciones el vehículo con el que trabajarás:</p>
+                <ol>
+                    <li>Verás una lista de vehículos disponibles</li>
+                    <li>Selecciona el vehículo que vas a operar</li>
+                    <li>Haz clic en <strong>"Seleccionar"</strong></li>
+                </ol>
+            </div>
+            <div class="info">
+                <strong>💡 Nota:</strong> Puedes cambiar de equipo en cualquier momento desde el menú lateral haciendo clic en el botón de "Cambiar equipo".
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⏰ Horas de Operación</h2>
+            <div class="module">
+                <h4><span class="icon">📝</span> Registrar Entrada y Salida</h4>
+                <ol>
+                    <li>Ve al módulo <strong>"Horas de Operación"</strong></li>
+                    <li>Haz clic en <strong>"Registrar Entrada"</strong> cuando inicies tu turno</li>
+                    <li>El sistema registrará automáticamente la hora de entrada</li>
+                    <li>Al finalizar tu turno, haz clic en <strong>"Registrar Salida"</strong></li>
+                    <li>El sistema calculará automáticamente:
+                        <ul>
+                            <li>Horas normales trabajadas</li>
+                            <li>Horas extras (si aplica)</li>
+                            <li>Descuentos por almuerzo y desayuno</li>
+                            <li>Multiplicadores por turno nocturno (1.35x)</li>
+                            <li>Multiplicadores por días festivos (1.75x)</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+            <div class="module">
+                <h4><span class="icon">👀</span> Ver Mis Registros</h4>
+                <ul>
+                    <li>Puedes ver todos tus registros de horas en la tabla</li>
+                    <li>Filtra por fecha para encontrar registros específicos</li>
+                    <li>Solo verás tus propios registros</li>
+                </ul>
+            </div>
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> Asegúrate de registrar correctamente tu entrada y salida. El sistema calcula automáticamente las horas extras según los horarios configurados.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⛽ Registro de Combustible</h2>
+            <div class="module">
+                <h4><span class="icon">📸</span> Agregar Registro de Combustible</h4>
+                <ol>
+                    <li>Ve al módulo <strong>"Combustible"</strong></li>
+                    <li>Haz clic en el botón <strong>"Agregar Registro"</strong> (ícono +)</li>
+                    <li>Completa el formulario:
+                        <ul>
+                            <li>Fecha y hora de la carga</li>
+                            <li>Galones cargados</li>
+                            <li>Precio por galón</li>
+                            <li>Odómetro actual</li>
+                            <li>Ubicación (se captura automáticamente con GPS)</li>
+                        </ul>
+                    </li>
+                    <li>Sube una foto del recibo de combustible</li>
+                    <li>Haz clic en <strong>"Guardar"</strong></li>
+                </ol>
+            </div>
+            <div class="module">
+                <h4><span class="icon">📊</span> Ver Mis Registros</h4>
+                <ul>
+                    <li>Visualiza todos tus registros de combustible</li>
+                    <li>Filtra por fecha o vehículo</li>
+                    <li>Revisa las fotos de recibos subidas</li>
+                    <li>El sistema calcula automáticamente los kilómetros recorridos</li>
+                </ul>
+            </div>
+            <div class="info">
+                <strong>💡 Tip:</strong> Siempre sube una foto clara del recibo. Esto ayuda a mantener registros precisos y facilita la auditoría.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Operaciones</h2>
+            <div class="module">
+                <h4><span class="icon">➕</span> Crear Nueva Operación</h4>
+                <ol>
+                    <li>Ve al módulo <strong>"Operaciones"</strong></li>
+                    <li>Haz clic en <strong>"Nueva Operación"</strong></li>
+                    <li>Completa la información:
+                        <ul>
+                            <li>Descripción de la operación</li>
+                            <li>Origen y destino</li>
+                            <li>Serie del equipo a transportar</li>
+                            <li>Fecha estimada de entrega</li>
+                        </ul>
+                    </li>
+                    <li>Haz clic en <strong>"Crear"</strong></li>
+                </ol>
+            </div>
+            <div class="module">
+                <h4><span class="icon">🔄</span> Actualizar Estado de Operación</h4>
+                <p>Durante el transporte, actualiza el estado de la operación:</p>
+                <ul>
+                    <li><strong>En Cargue:</strong> Cuando estés cargando el equipo</li>
+                    <li><strong>En Ruta:</strong> Cuando inicies el viaje</li>
+                    <li><strong>Entregado:</strong> Cuando completes la entrega</li>
+                </ul>
+                <p>Para cada cambio de estado puedes:</p>
+                <ul>
+                    <li>Capturar ubicación GPS automáticamente</li>
+                    <li>Subir fotos del proceso</li>
+                    <li>Agregar notas adicionales</li>
+                </ul>
+            </div>
+            <div class="module">
+                <h4><span class="icon">👀</span> Ver Mis Operaciones</h4>
+                <ul>
+                    <li>Solo verás las operaciones que tú has creado</li>
+                    <li>Filtra por estado (pendiente, en ruta, completada)</li>
+                    <li>Revisa el historial completo de cada operación</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✅ Checklist Pre-Operacional</h2>
+            <div class="module">
+                <h4><span class="icon">📝</span> Realizar Checklist Diario</h4>
+                <ol>
+                    <li>Ve al módulo <strong>"Checklist Pre-Op"</strong></li>
+                    <li>Haz clic en <strong>"Nuevo Checklist"</strong></li>
+                    <li>Revisa cada ítem del vehículo:
+                        <ul>
+                            <li>Estado de neumáticos</li>
+                            <li>Niveles de fluidos (aceite, agua, combustible)</li>
+                            <li>Luces y señalización</li>
+                            <li>Frenos y sistema de frenado</li>
+                            <li>Equipos de seguridad</li>
+                        </ul>
+                    </li>
+                    <li>Marca cada ítem como:
+                        <ul>
+                            <li><strong>OK:</strong> Si está en buen estado</li>
+                            <li><strong>Problema:</strong> Si requiere atención</li>
+                            <li><strong>Crítico:</strong> Si es un problema grave</li>
+                        </ul>
+                    </li>
+                    <li>Sube fotos de cualquier problema encontrado</li>
+                    <li>Agrega notas si es necesario</li>
+                    <li>Haz clic en <strong>"Guardar"</strong></li>
+                </ol>
+            </div>
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> El checklist pre-operacional es obligatorio antes de iniciar cualquier operación. Si encuentras problemas críticos, notifica inmediatamente a tu supervisor.
+            </div>
+            <div class="module">
+                <h4><span class="icon">📚</span> Ver Mis Checklists</h4>
+                <ul>
+                    <li>Puedes ver todos tus checklists realizados</li>
+                    <li>Filtra por fecha o vehículo</li>
+                    <li>Revisa el historial de problemas reportados</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📱 Navegación</h2>
+            <div class="module">
+                <h4><span class="icon">🧭</span> Menú Lateral</h4>
+                <p>El menú lateral te permite acceder a los módulos disponibles:</p>
+                <ul>
+                    <li><strong>Horas de Operación:</strong> Registrar entrada/salida y ver tus horas</li>
+                    <li><strong>Combustible:</strong> Registrar cargas de combustible</li>
+                    <li><strong>Operaciones:</strong> Crear y gestionar operaciones de transporte</li>
+                    <li><strong>Checklist Pre-Op:</strong> Realizar checklist diario del vehículo</li>
+                </ul>
+            </div>
+            <div class="info">
+                <strong>💡 Nota:</strong> Algunos módulos solo están disponibles para administradores. Como usuario normal, verás solo los módulos que puedes usar.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚛 Información del Equipo</h2>
+            <div class="module">
+                <h4><span class="icon">ℹ️</span> Ver Detalles del Vehículo</h4>
+                <p>En la parte inferior del menú lateral verás información del equipo seleccionado:</p>
+                <ul>
+                    <li>Placa del vehículo</li>
+                    <li>Marca y tipo de vehículo</li>
+                    <li>Botón para cambiar de equipo</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚪 Cerrar Sesión</h2>
+            <div class="step">
+                <span class="step-number">1</span>
+                Haz clic en el botón <strong>"Cerrar Sesión"</strong> en la parte inferior del menú lateral
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Serás redirigido automáticamente a la página de login
+            </div>
+            <div class="info">
+                <strong>💡 Nota:</strong> Siempre cierra sesión cuando termines de usar el sistema, especialmente si usas una computadora compartida.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ Preguntas Frecuentes</h2>
+            <div class="module">
+                <h4>¿Puedo editar un registro de horas después de guardarlo?</h4>
+                <p>No, los registros de horas no se pueden editar después de guardarlos. Si necesitas hacer una corrección, contacta a tu administrador.</p>
+            </div>
+            <div class="module">
+                <h4>¿Qué hago si olvido registrar mi salida?</h4>
+                <p>Contacta a tu administrador para que corrija el registro. No puedes editar tus propios registros.</p>
+            </div>
+            <div class="module">
+                <h4>¿Puedo ver los registros de otros usuarios?</h4>
+                <p>No, como usuario normal solo puedes ver tus propios registros. Solo los administradores pueden ver todos los registros.</p>
+            </div>
+            <div class="module">
+                <h4>¿Qué pasa si mi GPS no funciona al capturar ubicación?</h4>
+                <p>Puedes ingresar la ubicación manualmente o intentar nuevamente. El GPS es opcional pero recomendado para mayor precisión.</p>
+            </div>
+            <div class="module">
+                <h4>¿Puedo cambiar mi contraseña?</h4>
+                <p>Actualmente, debes contactar a tu administrador para cambiar tu contraseña. Esta funcionalidad estará disponible próximamente.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💡 Consejos para un Uso Eficiente</h2>
+            <div class="module">
+                <h4><span class="icon">⭐</span> Mejores Prácticas</h4>
+                <ul>
+                    <li><strong>Registra tus horas inmediatamente:</strong> No esperes al final del día para registrar entrada/salida</li>
+                    <li><strong>Sube fotos claras:</strong> Asegúrate de que las fotos de recibos y checklists sean legibles</li>
+                    <li><strong>Completa el checklist diario:</strong> Es importante para la seguridad y mantenimiento del vehículo</li>
+                    <li><strong>Actualiza el estado de operaciones:</strong> Mantén informado al equipo sobre el progreso de tus entregas</li>
+                    <li><strong>Revisa tus registros regularmente:</strong> Verifica que toda la información esté correcta</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section" style="background: #fff5f5; text-align: center; padding: 40px;">
+            <h2 style="border: none; margin-bottom: 10px; color: #cf1b22;">💼 Partequipos S.A.S</h2>
+            <p style="font-size: 1.1em; color: #50504f;">Sistema de Gestión de Transporte de Maquinaria</p>
+            <p style="margin-top: 20px; color: #50504f;">Versión 1.0 - 2025</p>
+        </div>
+    </div>
+</body>
+</html>

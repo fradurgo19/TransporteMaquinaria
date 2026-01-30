@@ -4,7 +4,7 @@ import { Card, CardHeader, CardBody } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Badge } from '../atoms/Badge';
-import { RefreshCw, Download, Upload, Edit2, Save, X, FileSpreadsheet, MapPin } from 'lucide-react';
+import { RefreshCw, Download, Upload, Edit2, Save, X, FileSpreadsheet, MapPin, ChevronRight, ChevronUp } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
 import { format, parseISO } from 'date-fns';
 import { useOvertimeTracking, useSyncOvertimeTracking, useUpdateOvertimeTracking, OvertimeTracking } from '../hooks/useOvertimeTracking';
@@ -25,6 +25,7 @@ export const OvertimeTrackingPage: React.FC = () => {
   const [viewingMap, setViewingMap] = useState<string | null>(null);
   const [uploadingMultiDay, setUploadingMultiDay] = useState(false);
   const [multiDayResult, setMultiDayResult] = useState<MultiDayProcessResult | null>(null);
+  const [showCalcColumns, setShowCalcColumns] = useState(false);
 
   const { data: overtimeData, isLoading } = useOvertimeTracking({
     page: currentPage,
@@ -296,9 +297,33 @@ export const OvertimeTrackingPage: React.FC = () => {
         {/* Tabla de Horas Extras */}
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Registros de Horas Extras ({overtimeData?.total || 0})
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Registros de Horas Extras ({overtimeData?.total || 0})
+              </h2>
+              {overtimeRecords.length > 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowCalcColumns((v) => !v)}
+                  className="inline-flex items-center gap-2 text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300"
+                  title={showCalcColumns ? 'Ocultar columnas de cálculo' : 'Mostrar columnas de cálculo'}
+                >
+                  {showCalcColumns ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" />
+                      Ocultar columnas de cálculo
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="h-4 w-4" />
+                      Mostrar columnas de cálculo
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardBody className="p-0 overflow-x-auto">
             {isLoading ? (
@@ -324,14 +349,18 @@ export const OvertimeTrackingPage: React.FC = () => {
                       <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">Fecha</th>
                       <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">H. Entrada</th>
                       <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">H. Salida</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-500 uppercase bg-blue-50">Val. Entrada</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-500 uppercase bg-blue-50">Val. Salida</th>
-                      <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-yellow-50">H.E. Diurna</th>
-                      <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-yellow-50">Des/Alm</th>
-                      <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-yellow-50">Compensado</th>
-                      <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-green-50">Total H.E. Diurna</th>
-                      <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-purple-50">H.E. Nocturna</th>
-                      <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-red-50">Dom/Fest</th>
+                      {showCalcColumns && (
+                        <>
+                          <th className="px-2 py-2 text-center font-medium text-gray-500 uppercase bg-blue-50">Val. Entrada</th>
+                          <th className="px-2 py-2 text-center font-medium text-gray-500 uppercase bg-blue-50">Val. Salida</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-yellow-50">H.E. Diurna</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-yellow-50">Des/Alm</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-yellow-50">Compensado</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-green-50">Total H.E. Diurna</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-purple-50">H.E. Nocturna</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-red-50">Dom/Fest</th>
+                        </>
+                      )}
                       <th className="px-2 py-2 text-right font-medium text-gray-500 uppercase bg-indigo-50">Horas Finales</th>
                       <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">GPS Entrada</th>
                       <th className="px-2 py-2 text-left font-medium text-gray-500 uppercase">GPS Salida</th>
@@ -362,27 +391,30 @@ export const OvertimeTrackingPage: React.FC = () => {
                           </td>
                           <td className="px-2 py-2 text-gray-700">{formatTime(record.hora_entrada)}</td>
                           <td className="px-2 py-2 text-gray-700">{formatTime(record.hora_salida)}</td>
-                          <td className="px-2 py-2 text-center text-blue-700 bg-blue-50">{formatTime(record.validacion_entrada)}</td>
-                          <td className="px-2 py-2 text-center text-blue-700 bg-blue-50">{formatTime(record.validacion_salida)}</td>
-                          {/* Columnas calculadas usando GPS Entrada y GPS Salida (si están disponibles) */}
-                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)}` : 'Calculado con Hora Entrada manual'}>
-                            {formatDecimal(record.he_diurna_decimal)}
-                          </td>
-                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)}` : 'Calculado con Hora Entrada manual'}>
-                            {formatDecimal(record.desayuno_almuerzo_decimal)}
-                          </td>
-                          <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
-                            {formatDecimal(record.horario_compensado_decimal)}
-                          </td>
-                          <td className="px-2 py-2 text-right text-green-700 bg-green-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
-                            {formatDecimal(record.total_he_diurna_decimal)}
-                          </td>
-                          <td className="px-2 py-2 text-right text-purple-700 bg-purple-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
-                            {formatDecimal(record.he_nocturna_decimal)}
-                          </td>
-                          <td className="px-2 py-2 text-right text-red-700 bg-red-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
-                            {formatDecimal(record.dom_fest_decimal)}
-                          </td>
+                          {showCalcColumns && (
+                            <>
+                              <td className="px-2 py-2 text-center text-blue-700 bg-blue-50">{formatTime(record.validacion_entrada)}</td>
+                              <td className="px-2 py-2 text-center text-blue-700 bg-blue-50">{formatTime(record.validacion_salida)}</td>
+                              <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)}` : 'Calculado con Hora Entrada manual'}>
+                                {formatDecimal(record.he_diurna_decimal)}
+                              </td>
+                              <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)}` : 'Calculado con Hora Entrada manual'}>
+                                {formatDecimal(record.desayuno_almuerzo_decimal)}
+                              </td>
+                              <td className="px-2 py-2 text-right text-yellow-700 bg-yellow-50 font-mono" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                                {formatDecimal(record.horario_compensado_decimal)}
+                              </td>
+                              <td className="px-2 py-2 text-right text-green-700 bg-green-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                                {formatDecimal(record.total_he_diurna_decimal)}
+                              </td>
+                              <td className="px-2 py-2 text-right text-purple-700 bg-purple-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                                {formatDecimal(record.he_nocturna_decimal)}
+                              </td>
+                              <td className="px-2 py-2 text-right text-red-700 bg-red-50 font-mono font-semibold" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
+                                {formatDecimal(record.dom_fest_decimal)}
+                              </td>
+                            </>
+                          )}
                           <td className="px-2 py-2 text-right text-indigo-700 bg-indigo-50 font-mono font-bold text-sm" title={record.hora_entrada_gps && record.hora_salida_gps ? `Calculado con GPS Entrada: ${formatTime(record.hora_entrada_gps)} y GPS Salida: ${formatTime(record.hora_salida_gps)}` : 'Calculado con horas manuales'}>
                             {formatDecimal(record.horas_finales_decimal)}
                           </td>
@@ -577,7 +609,7 @@ export const OvertimeTrackingPage: React.FC = () => {
                 <li><strong>Sábado:</strong> 9:00 AM - 12:00 PM</li>
               </ul>
               <p className="text-xs text-blue-700 mt-2">
-                <strong>H.E. Diurna:</strong> 6:00 AM - 8:00 AM y 5:30 PM - 9:00 PM (Lunes-Viernes) | 6:00 AM - 9:00 AM y 12:00 PM - 9:00 PM (Sábado)
+                <strong>H.E. Diurna:</strong> 6:00 AM - 8:00 AM y 5:30 PM - 9:00 PM (Lunes-Jueves) | Viernes: 8:00 AM - 4:00 PM | 6:00 AM - 9:00 AM y 12:00 PM - 9:00 PM (Sábado)
               </p>
               <p className="text-xs text-blue-700 mt-1">
                 <strong>H.E. Nocturna (x1.35):</strong> 9:00 PM - 6:00 AM

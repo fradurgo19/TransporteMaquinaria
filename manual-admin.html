@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Administrador | Partequipos S.A.S</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #cf1b22 0%, #a0151a 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .section {
+            background: #FFFFFF;
+            padding: 30px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #cf1b22;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #cf1b22;
+        }
+        .section h3 {
+            color: #50504f;
+            font-size: 1.4em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .module {
+            background: #fafafa;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #cf1b22;
+            border-radius: 5px;
+        }
+        .module h4 {
+            color: #50504f;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .module ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        .module li {
+            margin: 8px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px 5px 5px 0;
+        }
+        .badge-admin {
+            background: #ffe5e6;
+            color: #cf1b22;
+        }
+        .step {
+            background: #fff5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #cf1b22;
+        }
+        .step-number {
+            display: inline-block;
+            background: #cf1b22;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .info {
+            background: #fff5f5;
+            border-left: 4px solid #cf1b22;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        table th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #50504f;
+        }
+        .icon {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📘 Manual de Usuario - Administrador</h1>
+            <p>Sistema de Gestión de Transporte de Maquinaria - Partequipos S.A.S</p>
+        </header>
+
+        <div class="section">
+            <h2>🚀 Inicio de Sesión</h2>
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Ingresa a la aplicación</strong> usando tu navegador web
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Credenciales de acceso:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Email: <code>admin@partequipos.com</code></li>
+                    <li>Contraseña: <code>Password123!</code></li>
+                </ul>
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Haz clic en "Sign In"</strong> para acceder al sistema
+            </div>
+            <div class="info">
+                <strong>💡 Nota:</strong> Al iniciar sesión, serás redirigido automáticamente al Dashboard principal.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Dashboard Transport</h2>
+            <div class="module">
+                <h4><span class="icon">📈</span> Vista General</h4>
+                <p>El Dashboard es tu pantalla principal donde verás:</p>
+                <ul>
+                    <li><strong>Métricas en tiempo real:</strong> Kilómetros recorridos, consumo de combustible, vehículos activos</li>
+                    <li><strong>Alertas de documentos:</strong> SOAT, revisión técnica, seguros próximos a vencer</li>
+                    <li><strong>Gráficos de rendimiento:</strong> KPG (kilómetros por galón) de cada vehículo</li>
+                    <li><strong>Estado de la flota:</strong> Vehículos en operación, mantenimiento o inactivos</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚛 Gestión de Equipos</h2>
+            <div class="module">
+                <h4><span class="icon">➕</span> Agregar Nuevo Equipo</h4>
+                <ol>
+                    <li>Haz clic en el botón <strong>"Agregar Equipo"</strong></li>
+                    <li>Completa todos los campos obligatorios:
+                        <ul>
+                            <li>Nombre del conductor</li>
+                            <li>Ubicación del sitio</li>
+                            <li>Marca y placa del vehículo</li>
+                            <li>Número de serie</li>
+                            <li>Tipo de vehículo (Tractor o Trailer)</li>
+                            <li>Fechas de vencimiento de documentos</li>
+                        </ul>
+                    </li>
+                    <li>Sube los documentos (SOAT, revisión técnica, seguro, licencia)</li>
+                    <li>Haz clic en <strong>"Guardar"</strong></li>
+                </ol>
+            </div>
+            <div class="module">
+                <h4><span class="icon">✏️</span> Editar Equipo</h4>
+                <ol>
+                    <li>Busca el equipo en la lista</li>
+                    <li>Haz clic en el botón <strong>"Editar"</strong> (ícono de lápiz)</li>
+                    <li>Modifica los campos necesarios</li>
+                    <li>Haz clic en <strong>"Guardar"</strong></li>
+                </ol>
+            </div>
+            <div class="module">
+                <h4><span class="icon">📄</span> Gestionar Documentos</h4>
+                <ul>
+                    <li>Puedes subir documentos actualizados en cualquier momento</li>
+                    <li>El sistema te alertará cuando un documento esté próximo a vencer</li>
+                    <li>Formatos aceptados: PDF, JPG, PNG</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⏰ Horas de Operación</h2>
+            <div class="module">
+                <h4><span class="icon">👀</span> Visualizar Registros</h4>
+                <p>Como administrador puedes ver todos los registros de horas de todos los usuarios.</p>
+                <ul>
+                    <li>Filtra por fecha, conductor o vehículo</li>
+                    <li>Visualiza horas normales y horas extras calculadas automáticamente</li>
+                    <li>Exporta reportes en Excel</li>
+                </ul>
+            </div>
+            <div class="info">
+                <strong>💡 Nota:</strong> El sistema calcula automáticamente las horas extras según turnos nocturnos y días festivos.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⛽ Gestión de Combustible</h2>
+            <div class="module">
+                <h4><span class="icon">📊</span> Monitoreo de Consumo</h4>
+                <ul>
+                    <li>Visualiza todos los registros de combustible de la flota</li>
+                    <li>Filtra por fecha, vehículo o conductor</li>
+                    <li>Revisa fotos de recibos subidos por los operadores</li>
+                    <li>Analiza el consumo promedio por vehículo</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Operaciones</h2>
+            <div class="module">
+                <h4><span class="icon">👁️</span> Supervisión</h4>
+                <p>Puedes ver todas las operaciones realizadas por todos los usuarios:</p>
+                <ul>
+                    <li>Estado de cada operación (cargando, en ruta, entregado)</li>
+                    <li>Ubicación GPS en tiempo real</li>
+                    <li>Fotos de carga y entrega</li>
+                    <li>Historial completo de movimientos</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✅ Checklist Pre-Operacional</h2>
+            <div class="module">
+                <h4><span class="icon">📝</span> Revisión de Checklists</h4>
+                <ul>
+                    <li>Visualiza todos los checklists realizados por los operadores</li>
+                    <li>Filtra por fecha, vehículo o conductor</li>
+                    <li>Revisa fotos de problemas reportados</li>
+                    <li>Identifica vehículos que requieren mantenimiento</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📦 Gestión de Máquinas</h2>
+            <div class="module">
+                <h4><span class="icon">🔧</span> Administrar Catálogo</h4>
+                <ul>
+                    <li>Agrega nuevas máquinas al catálogo</li>
+                    <li>Edita información de máquinas existentes</li>
+                    <li>Gestiona especificaciones técnicas (peso, dimensiones, marca, modelo)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📄 Solicitudes de Transporte</h2>
+            <div class="module">
+                <h4><span class="icon">👀</span> Ver Todas las Solicitudes</h4>
+                <p>Como administrador puedes ver y gestionar todas las solicitudes:</p>
+                <ul>
+                    <li>Visualiza solicitudes de todos los usuarios</li>
+                    <li>Aprueba o rechaza solicitudes</li>
+                    <li>Asigna vehículos a solicitudes aprobadas</li>
+                    <li>Actualiza el estado de las solicitudes</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🧮 Seguimiento de Horas Extras</h2>
+            <div class="module">
+                <h4><span class="icon">📊</span> Reportes de Horas Extras</h4>
+                <ul>
+                    <li>Visualiza reportes consolidados de horas extras</li>
+                    <li>Filtra por período, conductor o vehículo</li>
+                    <li>Exporta reportes para nómina</li>
+                    <li>Revisa cálculos automáticos de multiplicadores (nocturno, festivo)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔐 Funciones Administrativas</h2>
+            <div class="module">
+                <h4><span class="icon">👥</span> Gestión de Usuarios</h4>
+                <ul>
+                    <li>Puedes registrar nuevos usuarios desde el formulario de registro</li>
+                    <li>Asignar roles (Admin, Usuario, Comercial)</li>
+                    <li>Gestionar permisos de acceso</li>
+                </ul>
+            </div>
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> Solo los administradores pueden crear y gestionar usuarios. Mantén las credenciales seguras.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📱 Navegación</h2>
+            <div class="module">
+                <h4><span class="icon">🧭</span> Menú Lateral</h4>
+                <p>El menú lateral te permite acceder rápidamente a todos los módulos:</p>
+                <ul>
+                    <li><strong>Dashboard Transport:</strong> Vista general del sistema</li>
+                    <li><strong>Gestión de Equipos:</strong> Administrar vehículos</li>
+                    <li><strong>Horas de Operación:</strong> Ver registros de horas</li>
+                    <li><strong>Seguimiento H. Extras:</strong> Reportes de horas extras</li>
+                    <li><strong>Combustible:</strong> Gestión de combustible</li>
+                    <li><strong>Operaciones:</strong> Seguimiento de operaciones</li>
+                    <li><strong>Checklist Pre-Op:</strong> Revisión de checklists</li>
+                    <li><strong>Solicitudes Transporte:</strong> Gestionar solicitudes</li>
+                    <li><strong>Gestión de Máquinas:</strong> Catálogo de máquinas</li>
+                    <li><strong>KPG de Fábrica:</strong> Comparación de rendimiento</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚪 Cerrar Sesión</h2>
+            <div class="step">
+                <span class="step-number">1</span>
+                Haz clic en el botón <strong>"Cerrar Sesión"</strong> en la parte inferior del menú lateral
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Serás redirigido automáticamente a la página de login
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ Preguntas Frecuentes</h2>
+            <div class="module">
+                <h4>¿Cómo cambio la contraseña de un usuario?</h4>
+                <p>Debes hacerlo desde el Dashboard de Supabase → Authentication → Users → Seleccionar usuario → Reset Password</p>
+            </div>
+            <div class="module">
+                <h4>¿Puedo eliminar un equipo?</h4>
+                <p>Sí, como administrador puedes eliminar equipos desde la página de Gestión de Equipos. Ten cuidado, esta acción no se puede deshacer.</p>
+            </div>
+            <div class="module">
+                <h4>¿Cómo exporto reportes?</h4>
+                <p>En la mayoría de módulos encontrarás un botón de "Exportar" que te permite descargar los datos en formato Excel.</p>
+            </div>
+        </div>
+
+        <div class="section" style="background: #fff5f5; text-align: center; padding: 40px;">
+            <h2 style="border: none; margin-bottom: 10px; color: #cf1b22;">💼 Partequipos S.A.S</h2>
+            <p style="font-size: 1.1em; color: #50504f;">Sistema de Gestión de Transporte de Maquinaria</p>
+            <p style="margin-top: 20px; color: #50504f;">Versión 1.0 - 2025</p>
+        </div>
+    </div>
+</body>
+</html>
