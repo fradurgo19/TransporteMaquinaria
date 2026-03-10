@@ -1,10 +1,13 @@
 -- ============================================
--- CREAR USUARIO ADMIN lgarcia@partequipos.com (MISMOS PERMISOS QUE admin@partequipos.com)
+-- CREAR USUARIO ADMIN (JEFE DE TRANSPORTE) - MISMOS PERMISOS QUE admin@partequipos.com
+-- lgarcia@partequipos.com - LAURA MARCELA GARCIA RAMIREZ
 -- ============================================
 -- Este script configura lgarcia@partequipos.com con rol 'admin',
--- mismo que admin@partequipos.com (acceso completo transporte).
+-- mismo que admin@partequipos.com: jefe de transporte (dashboard, equipos,
+-- horas, combustible, operaciones, solicitudes, máquinas, etc.).
+-- NO usar admin.logistica@partequipos.com: ella es jefe de transporte, no de logística.
 --
--- IMPORTANTE: Primero debes crear el usuario en Supabase Dashboard:
+-- IMPORTANTE: Primero crea el usuario en Supabase Dashboard:
 -- Authentication → Users → Add user → Create new user
 -- - Email: lgarcia@partequipos.com
 -- - Password: Password123!
@@ -24,14 +27,14 @@ SELECT
     'lgarcia@partequipos.com',
     'lgarcia',
     'admin',
-    COALESCE(au.raw_user_meta_data->>'full_name', 'L. Garcia'),
+    COALESCE(au.raw_user_meta_data->>'full_name', 'LAURA MARCELA GARCIA RAMIREZ'),
     true
 FROM auth.users au
 WHERE au.email = 'lgarcia@partequipos.com'
 ON CONFLICT (id) DO UPDATE SET
     role = 'admin',
     username = EXCLUDED.username,
-    full_name = EXCLUDED.full_name,
+    full_name = 'LAURA MARCELA GARCIA RAMIREZ',
     is_active = EXCLUDED.is_active,
     email = EXCLUDED.email;
 
@@ -39,7 +42,7 @@ ON CONFLICT (id) DO UPDATE SET
 UPDATE auth.users
 SET raw_user_meta_data = jsonb_build_object(
     'role', 'admin',
-    'full_name', COALESCE(raw_user_meta_data->>'full_name', 'L. Garcia'),
+    'full_name', 'LAURA MARCELA GARCIA RAMIREZ',
     'username', 'lgarcia'
 )
 WHERE email = 'lgarcia@partequipos.com';
@@ -62,5 +65,7 @@ WHERE u.email = 'lgarcia@partequipos.com';
 -- 1. Crea el usuario en Dashboard: Authentication → Add user
 --    Email: lgarcia@partequipos.com | Password: Password123!
 -- 2. Ejecuta este script en SQL Editor.
--- 3. El rol 'admin' tiene los mismos permisos que admin@partequipos.com
---    (dashboard transporte, equipos, horas, combustible, operaciones, etc.).
+-- 3. Rol 'admin' = mismos permisos que admin@partequipos.com (jefe de transporte):
+--    Dashboard Transporte, Gestión de Equipos, Horas de Operación, Seguimiento H. Extras,
+--    Combustible, Operaciones, Checklist Pre-Op, Solicitudes de Transporte,
+--    Gestión de Máquinas, KPG de Fábrica.

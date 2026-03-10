@@ -3,19 +3,21 @@
 -- ============================================
 
 -- Crear tabla para almacenar KPG de fábrica según fabricante, marca, modelo y año
+-- department: aislamiento transport (estándar) vs logistics (no se mezclan)
 CREATE TABLE IF NOT EXISTS manufacturer_kpg (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  manufacturer VARCHAR(100) NOT NULL, -- Fabricante (ej: INTERNATIONAL, VOLVO, MACK)
-  brand VARCHAR(100) NOT NULL, -- Marca
-  model VARCHAR(100) NOT NULL, -- Modelo
-  vehicle_type VARCHAR(50) NOT NULL, -- Tipo de vehículo (tractor, trailer, etc.)
-  year INTEGER, -- Año del vehículo (opcional)
-  kpg DECIMAL(10, 2) NOT NULL, -- Km/Galón según especificaciones de fábrica
-  notes TEXT, -- Notas adicionales
+  manufacturer VARCHAR(100) NOT NULL,
+  brand VARCHAR(100) NOT NULL,
+  model VARCHAR(100) NOT NULL,
+  vehicle_type VARCHAR(50) NOT NULL,
+  year INTEGER,
+  kpg DECIMAL(10, 2) NOT NULL,
+  notes TEXT,
+  department VARCHAR(50) NOT NULL DEFAULT 'transport',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   created_by UUID REFERENCES auth.users(id),
-  UNIQUE(manufacturer, brand, model, vehicle_type, year)
+  UNIQUE(manufacturer, brand, model, vehicle_type, year, department)
 );
 
 -- Crear índices para búsquedas rápidas
@@ -23,6 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_manufacturer_kpg_brand ON manufacturer_kpg(brand)
 CREATE INDEX IF NOT EXISTS idx_manufacturer_kpg_model ON manufacturer_kpg(model);
 CREATE INDEX IF NOT EXISTS idx_manufacturer_kpg_vehicle_type ON manufacturer_kpg(vehicle_type);
 CREATE INDEX IF NOT EXISTS idx_manufacturer_kpg_year ON manufacturer_kpg(year);
+CREATE INDEX IF NOT EXISTS idx_manufacturer_kpg_department ON manufacturer_kpg(department);
 
 -- Función para actualizar updated_at automáticamente
 CREATE OR REPLACE FUNCTION update_manufacturer_kpg_updated_at()
@@ -43,57 +46,37 @@ CREATE TRIGGER manufacturer_kpg_updated_at
 -- Habilitar RLS (Row Level Security)
 ALTER TABLE manufacturer_kpg ENABLE ROW LEVEL SECURITY;
 
--- Política: Solo administradores pueden ver, insertar, actualizar y eliminar
+-- Políticas por departamento: admin solo transport, admin_logistics solo logistics (no se mezclan)
 DROP POLICY IF EXISTS "Admins can view manufacturer_kpg" ON manufacturer_kpg;
 CREATE POLICY "Admins can view manufacturer_kpg"
-  ON manufacturer_kpg
-  FOR SELECT
+  ON manufacturer_kpg FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE auth.users.id = auth.uid()
-      AND (auth.users.raw_user_meta_data->>'role' = 'admin' 
-           OR auth.users.raw_user_meta_data->>'role' = 'admin_logistics')
-    )
+    (department = 'transport' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'))
+    OR (department = 'logistics' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin_logistics'))
   );
 
 DROP POLICY IF EXISTS "Admins can insert manufacturer_kpg" ON manufacturer_kpg;
 CREATE POLICY "Admins can insert manufacturer_kpg"
-  ON manufacturer_kpg
-  FOR INSERT
+  ON manufacturer_kpg FOR INSERT TO authenticated
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE auth.users.id = auth.uid()
-      AND (auth.users.raw_user_meta_data->>'role' = 'admin' 
-           OR auth.users.raw_user_meta_data->>'role' = 'admin_logistics')
-    )
+    (department = 'transport' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'))
+    OR (department = 'logistics' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin_logistics'))
   );
 
 DROP POLICY IF EXISTS "Admins can update manufacturer_kpg" ON manufacturer_kpg;
 CREATE POLICY "Admins can update manufacturer_kpg"
-  ON manufacturer_kpg
-  FOR UPDATE
+  ON manufacturer_kpg FOR UPDATE TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE auth.users.id = auth.uid()
-      AND (auth.users.raw_user_meta_data->>'role' = 'admin' 
-           OR auth.users.raw_user_meta_data->>'role' = 'admin_logistics')
-    )
+    (department = 'transport' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'))
+    OR (department = 'logistics' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin_logistics'))
   );
 
 DROP POLICY IF EXISTS "Admins can delete manufacturer_kpg" ON manufacturer_kpg;
 CREATE POLICY "Admins can delete manufacturer_kpg"
-  ON manufacturer_kpg
-  FOR DELETE
+  ON manufacturer_kpg FOR DELETE TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE auth.users.id = auth.uid()
-      AND (auth.users.raw_user_meta_data->>'role' = 'admin' 
-           OR auth.users.raw_user_meta_data->>'role' = 'admin_logistics')
-    )
+    (department = 'transport' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'))
+    OR (department = 'logistics' AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin_logistics'))
   );
 
 -- Comentarios en la tabla

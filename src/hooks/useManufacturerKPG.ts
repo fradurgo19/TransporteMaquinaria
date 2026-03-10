@@ -11,6 +11,7 @@ export interface ManufacturerKPG {
   year: number | null;
   kpg: number;
   notes: string | null;
+  department?: 'transport' | 'logistics';
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ interface ManufacturerKPGForm {
   year: number | null;
   kpg: number;
   notes?: string;
+  department: 'transport' | 'logistics';
 }
 
 /**

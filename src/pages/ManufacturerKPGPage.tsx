@@ -5,12 +5,14 @@ import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
 import { TextArea } from '../atoms/TextArea';
-import { Plus, Edit2, Trash2, Save, X, Fuel, Loader } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, Fuel, Loader } from 'lucide-react';
 import { useProtectedRoute } from '../hooks/useProtectedRoute';
+import { useDepartment } from '../hooks/useDepartment';
 import { useManufacturerKPG, useManufacturerKPGMutation, ManufacturerKPG } from '../hooks/useManufacturerKPG';
 
 export const ManufacturerKPGPage: React.FC = () => {
   useProtectedRoute(['admin', 'admin_logistics']); // Solo administradores
+  const { department } = useDepartment();
 
   const { data: kpgData, isLoading } = useManufacturerKPG();
   const { create, update, remove } = useManufacturerKPGMutation();
@@ -64,15 +66,16 @@ export const ManufacturerKPGPage: React.FC = () => {
     }
 
     try {
-      const data = {
+      const baseData = {
         manufacturer: formData.manufacturer,
         brand: formData.brand,
         model: formData.model,
         vehicle_type: formData.vehicle_type,
-        year: formData.year ? parseInt(formData.year) : null,
-        kpg: parseFloat(formData.kpg),
+        year: formData.year ? Number.parseInt(formData.year, 10) : null,
+        kpg: Number.parseFloat(formData.kpg),
         notes: formData.notes || undefined,
       };
+      const data = editingId ? baseData : { ...baseData, department };
 
       if (editingId) {
         await update.mutateAsync({ id: editingId, data });
@@ -221,19 +224,26 @@ export const ManufacturerKPGPage: React.FC = () => {
             </h2>
           </CardHeader>
           <CardBody className="p-0 overflow-x-auto">
-            {isLoading ? (
-              <div className="text-center py-8">
-                <Loader className="h-8 w-8 animate-spin mx-auto mb-3 text-gray-400" />
-                <p className="text-gray-500">Cargando registros...</p>
-              </div>
-            ) : !kpgData || kpgData.length === 0 ? (
-              <div className="text-center py-12">
-                <Fuel className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 mb-2">No hay registros de KPG de fábrica</p>
-                <p className="text-sm text-gray-400 mb-2">Haz clic en &quot;Nuevo KPG de Fábrica&quot; para agregar uno</p>
-                <p className="text-xs text-amber-600 max-w-md mx-auto">Si aparece el error &quot;Could not find the table manufacturer_kpg&quot;, ejecute <code className="bg-gray-100 px-1 rounded">database/manufacturer_kpg_setup.sql</code> en el editor SQL de Supabase.</p>
-              </div>
-            ) : (
+            {(() => {
+              if (isLoading) {
+                return (
+                  <div className="text-center py-8">
+                    <Loader className="h-8 w-8 animate-spin mx-auto mb-3 text-gray-400" />
+                    <p className="text-gray-500">Cargando registros...</p>
+                  </div>
+                );
+              }
+              if (!kpgData || kpgData.length === 0) {
+                return (
+                  <div className="text-center py-12">
+                    <Fuel className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-2">No hay registros de KPG de fábrica</p>
+                    <p className="text-sm text-gray-400 mb-2">Haz clic en &quot;Nuevo KPG de Fábrica&quot; para agregar uno</p>
+                    <p className="text-xs text-amber-600 max-w-md mx-auto">Si aparece el error &quot;Could not find the table manufacturer_kpg&quot;, ejecute <code className="bg-gray-100 px-1 rounded">database/manufacturer_kpg_setup.sql</code> en el editor SQL de Supabase.</p>
+                  </div>
+                );
+              }
+              return (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-[10px] sm:text-xs">
                   <thead className="bg-gray-50">
@@ -282,7 +292,8 @@ export const ManufacturerKPGPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-            )}
+              );
+            })()}
           </CardBody>
         </Card>
       </div>
